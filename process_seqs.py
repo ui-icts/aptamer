@@ -4,6 +4,7 @@ import sys
 import subprocess
 from Levenshtein import distance
 import scipy.stats
+
 from optparse import OptionParser
 usage = "usage: %prog [options] /path/to/input/fasta > output_file"
 parser = OptionParser(usage=usage)
@@ -12,13 +13,14 @@ parser.add_option("-e", dest="editDistance", default=3, type="int", help= "Speci
 parser.add_option("-t", dest="treeDistance", default=3, type="int", help= "Specifiy the minimum tree distance")
 parser.add_option("-n", dest="edgeType",  type="str", help= "Specify the type of edges to record (edit, tree, both)", default='both')
 parser.add_option("-w", dest="write",  type="str", help= "Should or should not write xgml file (y or n) defaults to y", default='y')
+parser.add_option("-p", dest ="prefix", type="str", help="The prefix sequence used for structure prediction defaults to GGGAGGACGAUGCG",default='GGGAGGACGAUGCGG')
+parser.add_option("-s", dest ="suffix", type="str", help="The prefix sequence used for structure prediction defaults to CAGACGACUCGCCCGA",default='CAGACGACUCGCCCGA')
 
 (options,args) = parser.parse_args()
 if len(args) < 1:
     parser.print_help()
     sys.exit()
-prefix = 'GGGAGGACGAUGCGG'
-suffix = 'CAGACGACUCGCCCGA'
+
 stats_energyDelta = []
 stats_editDistance = []
 stats_treeDistance = []
@@ -99,9 +101,9 @@ class XGMML:
 def RNAFold(sequence,version):
     cmd = None
     if version == 1:
-        cmd = ['/home/wthiel/ViennaRNA-1.8.2/Progs/RNAfold -p -T 30 -noLP -noPS -noGU']
+        cmd = ['/home/wthiel/ViennaRNA-1.8.2/Progs/RNAfold -p -T 30 -noLP -noPS -noGU -d2']
     elif version == 2:
-        cmd = ['/home/wthiel/ViennaRNA-2.0.0/Progs/RNAfold -p -T 30 --noLP --noPS --noGU']
+        cmd = ['/home/wthiel/ViennaRNA-2.0.0/Progs/RNAfold -p -T 30 --noLP --noPS --noGU -d2']
     sffproc = subprocess.Popen(cmd,stdout=subprocess.PIPE,stderr=subprocess.STDOUT,stdin=subprocess.PIPE,close_fds=True,shell=True)
     stdout_value, stderr_value = sffproc.communicate(sequence)
     return stdout_value
@@ -129,13 +131,9 @@ fastaHandle = open(args[0],'r')
 data = []
 #print "i,j,DiffEnergy,EditDist,TreeDist"
 for record in SeqIO.parse(fastaHandle,"fasta"):
-    sequence = prefix + str(record.seq) +suffix
+    sequence = options.prefix + str(record.seq) +options.suffix
     sequence = sequence.replace('T','U')
-    thisseq = None
-    try:
-       thisseq = Sequence(record.id,record.description.split('-')[1],sequence)
-    except:
-       thisseq = Sequence(record.id,record.description.split('\t')[1],sequence)
+    thisseq = Sequence(record.id,record.description.split('\t')[1],sequence)
     tmp = RNAFold(sequence,options.version)
     tmp = tmp.split("\n")
     thisseq.structure, thisseq.freeEnergy = tmp[1].split(' (')
