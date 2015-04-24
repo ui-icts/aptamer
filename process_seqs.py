@@ -5,10 +5,12 @@ import subprocess
 from Levenshtein import distance
 import scipy.stats
 import re
+import numpy
 
 from optparse import OptionParser
 usage = "usage: %prog [options] /path/to/input/fasta > output_file"
 parser = OptionParser(usage=usage)
+parser.add_option("-f",dest="fasta", action="store_false",default=True, help = "Set this if the input contains a structure line")
 parser.add_option("-v", dest="version", default=1, type="int", help= "Specifiy Vienna packager version 1 or 2 (1 is default)")
 parser.add_option("-e", dest="editDistance", default=3, type="int", help= "Specifiy the minimum edit distance")
 parser.add_option("-t", dest="treeDistance", default=3, type="int", help= "Specifiy the minimum tree distance")
