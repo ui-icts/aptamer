@@ -1,10 +1,11 @@
 #!/usr/bin/python
 from Bio import SeqIO
 import sys
-import numpy
 import subprocess
 from Levenshtein import distance
 import scipy.stats
+import re
+
 from optparse import OptionParser
 usage = "usage: %prog [options] /path/to/input/fasta > output_file"
 parser = OptionParser(usage=usage)
@@ -13,13 +14,15 @@ parser.add_option("-e", dest="editDistance", default=3, type="int", help= "Speci
 parser.add_option("-t", dest="treeDistance", default=3, type="int", help= "Specifiy the minimum tree distance")
 parser.add_option("-n", dest="edgeType",  type="str", help= "Specify the type of edges to record (edit, tree, both)", default='both')
 parser.add_option("-w", dest="write",  type="str", help= "Should or should not write xgml file (y or n) defaults to y", default='y')
+parser.add_option("-p", dest ="prefix", type="str", help="The prefix sequence used for structure prediction defaults to GGGAGGACGAUGCG",default='GGGAGGACGAUGCGG')
+parser.add_option("-s", dest ="suffix", type="str", help="The prefix sequence used for structure prediction defaults to CAGACGACUCGCCCGA",default='CAGACGACUCGCCCGA')
+parser.add_option("-r", dest="rna", action="store_true",default=False, help = "Specify this if your sequence is RNA ie has U instead of T" )
 
 (options,args) = parser.parse_args()
 if len(args) < 1:
     parser.print_help()
     sys.exit()
-prefix = 'GGGAGGACGAUGCGG'
-suffix = 'CAGACGACUCGCCCGA'
+
 stats_energyDelta = []
 stats_editDistance = []
 stats_treeDistance = []
@@ -67,7 +70,7 @@ class Comparison:
 class Sequence:
     def __init__(self,name,size,sequence):
         self.name = name
-        self.clusterSize = size.replace('SIZE=','')
+        self.clusterSize = int(size)
         self.sequence = sequence
         self.structure = None
         self.freeEnergy = None
@@ -124,31 +127,50 @@ def processComparisons(comparisons):
     treeDistance = RNAdistance("\n".join(seqToTree))
     treeDistance = treeDistance.strip("\n") #take off last lr
     treeDistance = treeDistance.split("\n")
-    #assert len(treeDistance) == len(comparisons)
+    assert len(treeDistance) == len(comparisons)
     for j in range(len(comparisons)):
         comparisons[j].treeDistance = treeDistance[j].split(' ')[1]  
         comparisons[j].output()
-
+sizere = re.compile("SIZE=(\d+)")
 fastaHandle = open(args[0],'r')
 data = []
-#print "i,j,DiffEnergy,EditDist,TreeDist"
-for record in SeqIO.parse(fastaHandle,"fasta"):
-    sequence = prefix + str(record.seq) +suffix
-    sequence = sequence.replace('T','U')
-    thisseq = None
-    try:
-       thisseq = Sequence(record.id,record.description.split('-')[1],sequence)
-    except:
-       thisseq = Sequence(record.id,record.description.split('\t')[1],sequence)
-    tmp = RNAFold(sequence,options.version)
-    tmp = tmp.split("\n")
-    thisseq.structure, thisseq.freeEnergy = tmp[1].split(' (')
-    thisseq.freeEnergy = abs(float(thisseq.freeEnergy.replace(')','')))
-    thisseq.ensembleFreeEnergy = abs(float(tmp[2].split('[')[1].replace(']','')))
-    # frequency of mfe structure in ensemble 0.248667; ensemble diversity 8.19 
-    thisseq.ensembleProbability = abs(float(tmp[4].split(';')[0].replace(' frequency of mfe structure in ensemble ','')))
-    thisseq.ensembleDiversity= abs(float(tmp[4].split(';')[1].replace(' ensemble diversity ','')))
-    data.append(thisseq)
+if options.fasta == True:
+    for record in SeqIO.parse(fastaHandle,"fasta"):
+        sequence = options.prefix + str(record.seq) +options.suffix
+        if options.rna == False:
+            sequence = sequence.replace('T','U')
+        size = 1
+
+        try:
+            size = sizere.search(record.description)
+            size = size.group(1)
+        except:
+            print "Not able to find size setting to 1"
+        thisseq = Sequence(record.id,size,sequence)
+        tmp = RNAFold(sequence,options.version)
+        tmp = tmp.split("\n")
+        print tmp
+        thisseq.structure, thisseq.freeEnergy = tmp[1].split(' (')
+        thisseq.freeEnergy = abs(float(thisseq.freeEnergy.replace(')','')))
+        thisseq.ensembleFreeEnergy = abs(float(tmp[2].split('[')[1].replace(']','')))
+        # frequency of mfe structure in ensemble 0.248667; ensemble diversity 8.19
+        thisseq.ensembleProbability = abs(float(tmp[4].split(';')[0].replace(' frequency of mfe structure in ensemble ','')))
+        thisseq.ensembleDiversity= abs(float(tmp[4].split(';')[1].replace(' ensemble diversity ','')))
+        data.append(thisseq)
+else:
+    for record in open(fastaHandle): #need to move through a triplet file structure not fasta
+        sequence = options.prefix + str(record.seq) +options.suffix
+        sequence = sequence.replace('T','U')
+        thisseq = Sequence(record.id,record.description.split('\t')[1],sequence)
+        tmp = RNAFold(sequence,options.version)
+        tmp = tmp.split("\n")
+        thisseq.structure, thisseq.freeEnergy = tmp[1].split(' (')
+        thisseq.freeEnergy = abs(float(thisseq.freeEnergy.replace(')','')))
+        thisseq.ensembleFreeEnergy = abs(float(tmp[2].split('[')[1].replace(']','')))
+        # frequency of mfe structure in ensemble 0.248667; ensemble diversity 8.19
+        thisseq.ensembleProbability = abs(float(tmp[4].split(';')[0].replace(' frequency of mfe structure in ensemble ','')))
+        thisseq.ensembleDiversity= abs(float(tmp[4].split(';')[1].replace(' ensemble diversity ','')))
+        data.append(thisseq)
 xgmml = XGMML(sys.argv[1])
 comparisons = []
 for x in range(0, len(data)):
