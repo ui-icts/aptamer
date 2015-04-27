@@ -4,10 +4,13 @@ import sys
 import subprocess
 from Levenshtein import distance
 import scipy.stats
+import re
+import numpy
 
 from optparse import OptionParser
 usage = "usage: %prog [options] /path/to/input/fasta > output_file"
 parser = OptionParser(usage=usage)
+parser.add_option("-f",dest="fasta", action="store_false",default=True, help = "Set this if the input contains a structure line")
 parser.add_option("-v", dest="version", default=1, type="int", help= "Specifiy Vienna packager version 1 or 2 (1 is default)")
 parser.add_option("-e", dest="editDistance", default=3, type="int", help= "Specifiy the minimum edit distance")
 parser.add_option("-t", dest="treeDistance", default=3, type="int", help= "Specifiy the minimum tree distance")
@@ -15,6 +18,7 @@ parser.add_option("-n", dest="edgeType",  type="str", help= "Specify the type of
 parser.add_option("-w", dest="write",  type="str", help= "Should or should not write xgml file (y or n) defaults to y", default='y')
 parser.add_option("-p", dest ="prefix", type="str", help="The prefix sequence used for structure prediction defaults to GGGAGGACGAUGCG",default='GGGAGGACGAUGCGG')
 parser.add_option("-s", dest ="suffix", type="str", help="The prefix sequence used for structure prediction defaults to CAGACGACUCGCCCGA",default='CAGACGACUCGCCCGA')
+parser.add_option("-r", dest="rna", action="store_true",default=False, help = "Specify this if your sequence is RNA ie has U instead of T" )
 
 (options,args) = parser.parse_args()
 if len(args) < 1:
@@ -68,7 +72,7 @@ class Comparison:
 class Sequence:
     def __init__(self,name,size,sequence):
         self.name = name
-        self.clusterSize = size.replace('SIZE=','')
+        self.clusterSize = int(size)
         self.sequence = sequence
         self.structure = None
         self.freeEnergy = None
@@ -101,18 +105,21 @@ class XGMML:
 def RNAFold(sequence,version):
     cmd = None
     if version == 1:
-        cmd = ['/home/wthiel/ViennaRNA-1.8.2/Progs/RNAfold -p -T 30 -noLP -noPS -noGU -d2']
+        cmd = ['RNAfold -p -T 30 -noLP -noPS -noGU']
     elif version == 2:
-        cmd = ['/home/wthiel/ViennaRNA-2.0.0/Progs/RNAfold -p -T 30 --noLP --noPS --noGU -d2']
+        cmd = ['RNAfold -p -T 30 --noLP --noPS --noGU']
     sffproc = subprocess.Popen(cmd,stdout=subprocess.PIPE,stderr=subprocess.STDOUT,stdin=subprocess.PIPE,close_fds=True,shell=True)
     stdout_value, stderr_value = sffproc.communicate(sequence)
     return stdout_value
 
 def RNAdistance(structures):
-    cmd = ['/home/jamesO/ViennaRNA-1.8.2/Progs/RNAdistance']
+    cmd = ['RNAdistance']
     sffproc = subprocess.Popen(cmd,stdout=subprocess.PIPE,stderr=subprocess.STDOUT,stdin=subprocess.PIPE,close_fds=True,shell=True)
     stdout_value, stderr_value = sffproc.communicate(structures)
     return stdout_value
+
+def mymean(a):
+	return	float(sum(a))/len(a)
 
 def processComparisons(comparisons):
     seqToTree = []
@@ -126,23 +133,46 @@ def processComparisons(comparisons):
     for j in range(len(comparisons)):
         comparisons[j].treeDistance = treeDistance[j].split(' ')[1]  
         comparisons[j].output()
-
+sizere = re.compile("SIZE=(\d+)")
 fastaHandle = open(args[0],'r')
 data = []
-#print "i,j,DiffEnergy,EditDist,TreeDist"
-for record in SeqIO.parse(fastaHandle,"fasta"):
-    sequence = options.prefix + str(record.seq) +options.suffix
-    sequence = sequence.replace('T','U')
-    thisseq = Sequence(record.id,record.description.split('\t')[1],sequence)
-    tmp = RNAFold(sequence,options.version)
-    tmp = tmp.split("\n")
-    thisseq.structure, thisseq.freeEnergy = tmp[1].split(' (')
-    thisseq.freeEnergy = abs(float(thisseq.freeEnergy.replace(')','')))
-    thisseq.ensembleFreeEnergy = abs(float(tmp[2].split('[')[1].replace(']','')))
-    # frequency of mfe structure in ensemble 0.248667; ensemble diversity 8.19 
-    thisseq.ensembleProbability = abs(float(tmp[4].split(';')[0].replace(' frequency of mfe structure in ensemble ','')))
-    thisseq.ensembleDiversity= abs(float(tmp[4].split(';')[1].replace(' ensemble diversity ','')))
-    data.append(thisseq)
+if options.fasta == True:
+    for record in SeqIO.parse(fastaHandle,"fasta"):
+        sequence = options.prefix + str(record.seq) +options.suffix
+        if options.rna == False:
+            sequence = sequence.replace('T','U')
+        size = 1
+
+        try:
+            size = sizere.search(record.description)
+            size = size.group(1)
+        except:
+            print "Not able to find size setting to 1"
+        thisseq = Sequence(record.id,size,sequence)
+        tmp = RNAFold(sequence,options.version)
+        tmp = tmp.split("\n")
+        print tmp
+        thisseq.structure, thisseq.freeEnergy = tmp[1].split(' (')
+        thisseq.freeEnergy = abs(float(thisseq.freeEnergy.replace(')','')))
+        thisseq.ensembleFreeEnergy = abs(float(tmp[2].split('[')[1].replace(']','')))
+        # frequency of mfe structure in ensemble 0.248667; ensemble diversity 8.19
+        thisseq.ensembleProbability = abs(float(tmp[4].split(';')[0].replace(' frequency of mfe structure in ensemble ','')))
+        thisseq.ensembleDiversity= abs(float(tmp[4].split(';')[1].replace(' ensemble diversity ','')))
+        data.append(thisseq)
+else:
+    for record in open(fastaHandle): #need to move through a triplet file structure not fasta
+        sequence = options.prefix + str(record.seq) +options.suffix
+        sequence = sequence.replace('T','U')
+        thisseq = Sequence(record.id,record.description.split('\t')[1],sequence)
+        tmp = RNAFold(sequence,options.version)
+        tmp = tmp.split("\n")
+        thisseq.structure, thisseq.freeEnergy = tmp[1].split(' (')
+        thisseq.freeEnergy = abs(float(thisseq.freeEnergy.replace(')','')))
+        thisseq.ensembleFreeEnergy = abs(float(tmp[2].split('[')[1].replace(']','')))
+        # frequency of mfe structure in ensemble 0.248667; ensemble diversity 8.19
+        thisseq.ensembleProbability = abs(float(tmp[4].split(';')[0].replace(' frequency of mfe structure in ensemble ','')))
+        thisseq.ensembleDiversity= abs(float(tmp[4].split(';')[1].replace(' ensemble diversity ','')))
+        data.append(thisseq)
 xgmml = XGMML(sys.argv[1])
 comparisons = []
 for x in range(0, len(data)):
@@ -160,14 +190,14 @@ if options.write == 'y':
     cytoscapeOut = open (args[0]+".xgmml",'w')
     cytoscapeOut.write(xgmml.output())
     cytoscapeOut.close()
-print "%s mean energyDelta" % scipy.stats.mean(stats_energyDelta)
-print "%s std energyDelta" % scipy.stats.std(stats_energyDelta)
+print "%s mean energyDelta" % numpy.mean(stats_energyDelta)
+print "%s std energyDelta" % numpy.std(stats_energyDelta)
 print "%s sem energyDelta" % scipy.stats.sem(stats_energyDelta)
-print "%s mean editDistance" % scipy.stats.mean(stats_editDistance)
-print "%s std editDistance" % scipy.stats.std(stats_editDistance)
+print "%s mean editDistance" % numpy.mean(stats_editDistance)
+print "%s std editDistance" % numpy.std(stats_editDistance)
 print "%s sem editDistance" % scipy.stats.sem(stats_editDistance)
-print "%s mean treeDistance" % scipy.stats.mean(stats_treeDistance)
-print "%s std treeDistance" % scipy.stats.std(stats_treeDistance)
+print "%s mean treeDistance" % numpy.mean(stats_treeDistance)
+print "%s std treeDistance" % numpy.std(stats_treeDistance)
 print "%s sem treeDistance" % scipy.stats.sem(stats_treeDistance)
 print "%s %s pearsons corr tree:edit" % scipy.stats.pearsonr(stats_treeDistance,stats_editDistance)
 print "%s %s pearsons corr tree:energy" % scipy.stats.pearsonr(stats_treeDistance,stats_energyDelta)

@@ -95,9 +95,9 @@ class XGMML:
 def RNAFold(sequence,version):
     cmd = None
     if version == 1:
-        cmd = ['/home/wthiel/ViennaRNA-1.8.2/Progs/RNAfold -p -T 30 -noLP -noPS -noGU']
+        cmd = ['RNAfold -p -T 30 -noLP -noPS -noGU']
     elif version == 2:
-        cmd = ['/home/wthiel/ViennaRNA-2.0.0/Progs/RNAfold -p -T 30 --noLP --noPS --noGU']
+        cmd = ['RNAfold -p -T 30 --noLP --noPS --noGU']
     sffproc = subprocess.Popen(cmd,stdout=subprocess.PIPE,stderr=subprocess.STDOUT,stdin=subprocess.PIPE,close_fds=True,shell=True)
     stdout_value, stderr_value = sffproc.communicate(sequence)
     tmp = stdout_value.split("\n")
@@ -112,7 +112,7 @@ def RNAFold(sequence,version):
     return stdout_value
 
 def RNAdistance(structures):
-    cmd = ['/home/jamesO/ViennaRNA-1.8.2/Progs/RNAdistance']
+    cmd = ['RNAdistance']
     sffproc = subprocess.Popen(cmd,stdout=subprocess.PIPE,stderr=subprocess.STDOUT,stdin=subprocess.PIPE,close_fds=True,shell=True)
     stdout_value, stderr_value = sffproc.communicate(structures)
     return stdout_value
