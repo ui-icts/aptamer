@@ -11,7 +11,7 @@ from optparse import OptionParser
 usage = "usage: %prog [options] /path/to/input/fasta > output_file"
 parser = OptionParser(usage=usage)
 parser.add_option("-f",dest="fasta", action="store_false",default=True, help = "Set this if the input contains a structure line")
-parser.add_option("-v", dest="version", default=1, type="int", help= "Specifiy Vienna packager version 1 or 2 (1 is default)")
+parser.add_option("-v", dest="version", default=2, type="int", help= "Specifiy Vienna packager version 1 or 2 (1 is default)")
 parser.add_option("-e", dest="editDistance", default=3, type="int", help= "Specifiy the minimum edit distance")
 parser.add_option("-t", dest="treeDistance", default=3, type="int", help= "Specifiy the minimum tree distance")
 parser.add_option("-n", dest="edgeType",  type="str", help= "Specify the type of edges to record (edit, tree, both)", default='both')
@@ -151,7 +151,6 @@ if options.fasta == True:
         thisseq = Sequence(record.id,size,sequence)
         tmp = RNAFold(sequence,options.version)
         tmp = tmp.split("\n")
-        print tmp
         thisseq.structure, thisseq.freeEnergy = tmp[1].split(' (')
         thisseq.freeEnergy = abs(float(thisseq.freeEnergy.replace(')','')))
         thisseq.ensembleFreeEnergy = abs(float(tmp[2].split('[')[1].replace(']','')))
@@ -161,17 +160,20 @@ if options.fasta == True:
         data.append(thisseq)
 else:
     for record in open(fastaHandle): #need to move through a triplet file structure not fasta
-        sequence = options.prefix + str(record.seq) +options.suffix
-        sequence = sequence.replace('T','U')
-        thisseq = Sequence(record.id,record.description.split('\t')[1],sequence)
-        tmp = RNAFold(sequence,options.version)
-        tmp = tmp.split("\n")
-        thisseq.structure, thisseq.freeEnergy = tmp[1].split(' (')
-        thisseq.freeEnergy = abs(float(thisseq.freeEnergy.replace(')','')))
-        thisseq.ensembleFreeEnergy = abs(float(tmp[2].split('[')[1].replace(']','')))
-        # frequency of mfe structure in ensemble 0.248667; ensemble diversity 8.19
-        thisseq.ensembleProbability = abs(float(tmp[4].split(';')[0].replace(' frequency of mfe structure in ensemble ','')))
-        thisseq.ensembleDiversity= abs(float(tmp[4].split(';')[1].replace(' ensemble diversity ','')))
+        header = record.readline()
+        sequence = record.readline()
+        structure = record.readline()
+        sequence = options.prefix + sequence +options.suffix
+        if options.rna == False:
+            sequence = sequence.replace('T','U')
+        size = 1
+        try:
+                size = sizere.search(header)
+                size = size.group(1)
+        except:
+            print "Not able to find size setting to 1"
+        thisseq = Sequence(record,size,sequence)
+        thisseq.structure = structure
         data.append(thisseq)
 xgmml = XGMML(sys.argv[1])
 comparisons = []
