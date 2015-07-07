@@ -7,7 +7,6 @@ import scipy.stats
 import re
 import numpy
 from itertools import islice
-
 from optparse import OptionParser
 
 
