@@ -10,86 +10,94 @@ from itertools import islice
 
 from optparse import OptionParser
 
+
 usage = "usage: %prog [options] /path/to/input/fasta > output_file"
+
 parser = OptionParser(usage=usage)
-parser.add_option("-f", dest="fasta", action="store_false", default=True,
+
+parser.add_option("-a", dest="seed", action="store_true", default=False,
+                  help="Specify this if you want to use the seed sequence algo")
+
+parser.add_option("-e", dest="editDistance", default=3, type="int", help="Specify the minimum edit distance")
+
+parser.add_option("-f", dest="fasta", action="store_true", default=False,
                   help="Set this if the input contains a structure line")
-parser.add_option("-v", dest="version", default=2, type="int",
-                  help="Specifiy Vienna packager version 1 or 2 (1 is default)")
-parser.add_option("-e", dest="editDistance", default=3, type="int", help="Specifiy the minimum edit distance")
-parser.add_option("-t", dest="treeDistance", default=3, type="int", help="Specifiy the minimum tree distance")
+
 parser.add_option("-n", dest="edgeType", type="str", help="Specify the type of edges to record (edit, tree, both)",
                   default='both')
-parser.add_option("-w", dest="write", type="str", help="Should or should not write xgml file (y or n) defaults to y",
-                  default='y')
+
 parser.add_option("-p", dest="prefix", type="str",
                   help="The prefix sequence used for structure prediction defaults to GGGAGGACGAUGCG",
                   default='GGGAGGACGAUGCGG')
+
+parser.add_option("-r", dest="rna", action="store_true", default=False,
+                  help="Specify this if your sequence is RNA ie has U instead of T")
+
 parser.add_option("-s", dest="suffix", type="str",
                   help="The prefix sequence used for structure prediction defaults to CAGACGACUCGCCCGA",
                   default='CAGACGACUCGCCCGA')
-parser.add_option("-r", dest="rna", action="store_true", default=False,
-                  help="Specify this if your sequence is RNA ie has U instead of T")
-parser.add_option("-a", dest="seed", action="store_true", default=False,
-                  help="Specify this if you want to use the seed sequence algo")
+
+parser.add_option("-t", dest="treeDistance", default=3, type="int", help="Specify the minimum tree distance")
+
+parser.add_option("-v", dest="version", default=2, type="int",
+                  help="Specify Vienna packager version 1 or 2 (1 is default)")
+
+parser.add_option("-w", dest="write", type="str", help="Should or should not write xgmml file (y or n) defaults to y",
+                  default='y')
 
 (options, args) = parser.parse_args()
 
 if len(args) < 1:
     parser.print_help()
     sys.exit()
-
+sizere = re.compile("SIZE=(\d+)")  # set up re for the cluster size
+fastaHandle = open(args[0], 'r')
+data = []  # main data structure is a list of Sequence objects
+# use this if the input is in fasta format
 stats_energyDelta = []
 stats_editDistance = []
 stats_treeDistance = []
 
-
 class Comparison:
-    def __init__(self, S1, S2, x):
-        self.sequence1 = S1
-        self.sequence2 = S2
-        self.xgmml = x
+    def __init__(self, s1, s2, xgmml_pointer):
+        self.sequence1 = s1
+        self.sequence2 = s2
+        self.xgmml = xgmml_pointer
         self.energyDelta = None
         self.editDistance = None
         self.treeDistance = None
         self.flag = False
+
     def matched(self):
         if self.flag:
             return True
         else:
             return False
+
     def output(self):
-        # output = [self.sequence1.name,
-        # self.sequence2.name,
-        # str(self.energyDelta),
-        #         str(self.editDistance),
-        #         str(self.treeDistance),
-        #         ]
-        #print ",".join(output)
         stats_energyDelta.append(self.energyDelta)
         stats_editDistance.append(self.editDistance)
         stats_treeDistance.append(float(self.treeDistance))
-        if not self.xgmml.nodes.has_key(self.sequence1.name): # if the xgmml data structure does not have this node add it
+        if not self.sequence1.name in self.xgmml.nodes:  # if the xgmml data structure does not have this node add it
             self.xgmml.nodes[self.sequence1.name] = self.sequence1
-        if not self.xgmml.nodes.has_key(self.sequence2.name): # if the xgmml data structure does not have this node add it
+        if not self.sequence2.name in self.xgmml.nodes:  # if the xgmml data structure does not have this node add it
             self.xgmml.nodes[self.sequence2.name] = self.sequence2
 
-        harvested_nodes = {}
         if options.edgeType == 'both':
             if int(self.treeDistance) <= options.treeDistance:
                 self.xgmml.edges.append([self.sequence1.name, self.sequence2.name, self.treeDistance, 'treeDistance'])
                 self.flag = True
             if int(self.editDistance) <= options.editDistance:
                 self.xgmml.edges.append([self.sequence1.name, self.sequence2.name, self.treeDistance, 'editDistance'])
-                self.flag = True #have a match need to remove these from future consideration
+                self.flag = True  # have a match need to remove these from future consideration
         elif options.edgeType == 'edit':
             if int(self.editDistance) <= options.editDistance:
                 self.xgmml.edges.append([self.sequence1.name, self.sequence2.name, self.treeDistance, 'editDistance'])
-                self.flag = True #have a match need to remove these from future consideration
+                self.flag = True  # have a match need to remove these from future consideration
         elif options.edgeType == 'tree':
             if int(self.treeDistance) <= options.treeDistance:
                 self.xgmml.edges.append([self.sequence1.name, self.sequence2.name, self.treeDistance, 'treeDistance'])
-                self.flag = True #have a match need to remove these from future consideration
+                self.flag = True  # have a match need to remove these from future consideration
         else:
             print "Error in options %s not supported or recognized" % (options.editType,)
             parser.print_help()
@@ -110,14 +118,12 @@ class Sequence:
 
     def full_output(self):
         attrs = vars(self)
-        print "---"
-        print ','.join("%s:%s" %item for item in attrs.items())
-        print "+++"
+        print ','.join("%s:%s" % item for item in attrs.items())
 
-    def output (self):
-        print ">%s  SIZE=%s" %(self.name, self.clusterSize)
+    def output(self):
+        print ">%s  SIZE=%s" % (self.name, self.clusterSize)
         print "%s" % (self.sequence,)
-        print "%s" %(self.structure,)
+        print "%s" % (self.structure,)
 
 
 class XGMML:
@@ -127,7 +133,10 @@ class XGMML:
         self.edges = []
 
     def output(self):
-        string = """<?xml version="1.0"?>\n<graph directed="1" id="5" label="%s"\nxmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"\nxmlns:ns1="http://www.w3.org/1999/xlink"\nxmlns:dc="http://purl.org/dc/elements/1.1/"\nxmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"\nxmlns="http://www.cs.rpi.edu/XGMML"> """ % (
+        string = """<?xml version="1.0"?>\n<graph directed="1" id="5" label="%s"\n\
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"\n\
+        xmlns:ns1="http://www.w3.org/1999/xlink"\nxmlns:dc="http://purl.org/dc/elements/1.1/"\n\
+        xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"\nxmlns="http://www.cs.rpi.edu/XGMML"> """ % (
             self.name,)
         string += "\n"
         for n in self.nodes:
@@ -142,7 +151,8 @@ class XGMML:
             string += """<att name="ensembleDiversity" value="%s" /> \n""" % (self.nodes[n].ensembleDiversity,)
             string += "</node>\n"
         for e in self.edges:
-            string += """<edge source="%s" target="%s" label="%s to %s" >\n<att label="interaction" name="%s" value="%s" type="string"/>\n</edge>\n""" % (
+            string += """<edge source="%s" target="%s" label="%s to %s" >\n\
+            <att label="interaction" name="%s" value="%s" type="string"/>\n</edge>\n""" % (
                 e[0], e[1], e[0], e[1], e[3], e[2])
             string += "\n"
         string += "</graph>\n"
@@ -173,24 +183,22 @@ def mymean(a):
     return float(sum(a)) / len(a)
 
 
-def processComparisons(comparisons):
+def processComparisons(comparison_list):
+    #helper function that runs a batch of comparisons
     seqToTree = []
-    for c in comparisons:
+    for c in comparison_list:
         seqToTree.append(c.sequence1.structure)
         seqToTree.append(c.sequence2.structure)
     treeDistance = RNAdistance("\n".join(seqToTree))
     treeDistance = treeDistance.strip("\n")  # take off last lr
     treeDistance = treeDistance.split("\n")
-    assert len(treeDistance) == len(comparisons)
-    for j in range(len(comparisons)):
-        comparisons[j].treeDistance = treeDistance[j].split(' ')[1]
-        comparisons[j].output()
+    assert len(treeDistance) == len(comparison_list)
+    for j in range(len(comparison_list)):
+        comparison_list[j].treeDistance = treeDistance[j].split(' ')[1]
+        comparison_list[j].output()
 
 
-sizere = re.compile("SIZE=(\d+)") #set up re for the cluster size
-fastaHandle = open(args[0], 'r')
-data = [] #main data structure is a list of Sequence objects
-#use this if the input is in fasta format
+
 if options.fasta:
     for record in SeqIO.parse(fastaHandle, "fasta"):
         sequence = options.prefix + str(record.seq) + options.suffix
@@ -201,8 +209,8 @@ if options.fasta:
         try:
             size = sizere.search(record.description)
             size = size.group(1)
-        except:
-            print "Not able to find size, setting to 1"
+        except AttributeError:
+            print 'Not able to find size, setting to 1'
 
         thisseq = Sequence(record.id, size, sequence)
         tmp = RNAFold(sequence, options.version)
@@ -217,8 +225,7 @@ if options.fasta:
         thisseq.ensembleDiversity = abs(float(tmp[4].split(';')[1].replace(' ensemble diversity ', '')))
         data.append(thisseq)
 
-
-else: #use this if the data is not in fasta format
+else:  # use this if the data is not in fasta format
     while True:
         try:
             header, sequence, structure = list(
@@ -238,9 +245,9 @@ else: #use this if the data is not in fasta format
         try:
             size = sizere.search(header)
             size = size.group(1)
-        except:
+        except AttributeError:
             print "Not able to find size setting to 1"
-        header = header.replace('>','')
+        header = header.replace('>', '')
         header = header.split('SIZE=')[0]
         thisseq = Sequence(header, size, sequence)
         thisseq.freeEnergy = 1
@@ -253,11 +260,12 @@ else: #use this if the data is not in fasta format
 xgmml = XGMML(sys.argv[1])
 #data structure should now be populated, now need to move through and find all the connections
 if options.seed:
-    past_harvested_nodes = {} #only used for seed algo but collected in all cases
-    while len(data)>2:
+    past_harvested_nodes = {}  # only used for seed algo but collected in all cases
+    while len(data) > 2:
         data[0].useForComparison = False
         comparisons = []
-        for x in range(1, len(data)-1): #go through and find all the matches, then remove matches and start again till gone
+         # go through and find all the matches, then remove matches and start again till gone
+        for x in range(1, len(data)-1):
             comp = Comparison(data[0], data[x], xgmml)
             comp.energyDelta = abs(comp.sequence1.freeEnergy - comp.sequence2.freeEnergy)
             # distance function imported from from Levenshtein
@@ -269,30 +277,24 @@ if options.seed:
                 c.sequence2.useForComparison = False
         newData = []
         for d in data:
-            if d.useForComparison == True:
+            if d.useForComparison:
                 newData.append(d)
-        print "%s reduced to %s " %(len(data),len(newData))
+        print "%s reduced to %s " % (len(data), len(newData))
         data = newData
-
-
-
 
 else:
     comparisons = []
-    for d in data: #prints out all the sequences and structures
-            print d.output()
-    for x in range(0, len(data)): #this makes the edges
+    for x in range(0, len(data)):  # this makes the edges
         for y in range(x + 1, len(data)):
             comp = Comparison(data[x], data[y], xgmml)
             comp.energyDelta = abs(comp.sequence1.freeEnergy - comp.sequence2.freeEnergy)
             # distance function imported from from Levenshtein
             comp.editDistance = distance(comp.sequence1.sequence, comp.sequence2.sequence)
             comparisons.append(comp)
-
-            if len(comparisons) > 10000: #group things in batches of 10000  to find tree distances
+            if len(comparisons) > 10000:  # group things in batches of 10000  to find tree distances
                 processComparisons(comparisons)
-                comparisons = [] #zero out the comparisons array and start refilling again
-    processComparisons(comparisons) #flush out the last of the tree distance comparisons
+                comparisons = []  # zero out the comparisons array and start refilling again
+    processComparisons(comparisons)  # flush out the last of the tree distance comparisons
 
 if options.write == 'y':
     cytoscapeOut = open(args[0] + ".xgmml", 'w')
@@ -315,8 +317,3 @@ else:  # ugly hack because we don't have the energy values for things we didn't 
     print "1 1 pearsons corr tree:edit"
     print "1 1 pearsons corr tree:energy"
     print "1 1 pearsons corr edit:energy"
-
-# stats_energyDelta = []
-# stats_editDistance = []
-# stats_treeDistance = []
-
