@@ -59,7 +59,8 @@ class Comparison:
             
 
 
-class Sequence:
+class Sequence:# collects the sequence, clustersize and freeEnergy for each member of the inputed sequences
+
     def __init__(self,name,size,sequence):
         self.name = name
         self.clusterSize = size.replace('SIZE=','')
@@ -70,6 +71,7 @@ class Sequence:
         self.ensembleProbablility = None
         self.ensembleDiversity = None
 class XGMML:
+
     def __init__ (self,name):
         self.name  =  name 
         self.nodes = {}
@@ -117,7 +119,7 @@ def RNAdistance(structures):
     stdout_value, stderr_value = sffproc.communicate(structures)
     return stdout_value
 
-def processComparisons(comparisons):
+def processComparisons(comparisons):#batches up a bunch of comparisons and finds out the tree distance between two sequences
     seqToTree = []
     for c in comparisons:
         seqToTree.append(c.sequence1.structure)

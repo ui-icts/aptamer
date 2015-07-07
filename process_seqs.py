@@ -30,8 +30,11 @@ parser.add_option("-s", dest="suffix", type="str",
                   default='CAGACGACUCGCCCGA')
 parser.add_option("-r", dest="rna", action="store_true", default=False,
                   help="Specify this if your sequence is RNA ie has U instead of T")
+parser.add_option("-a", dest="seed", action="store_true", default=False,
+                  help="Specify this if you want to use the seed sequence algo")
 
 (options, args) = parser.parse_args()
+
 if len(args) < 1:
     parser.print_help()
     sys.exit()
@@ -49,7 +52,12 @@ class Comparison:
         self.energyDelta = None
         self.editDistance = None
         self.treeDistance = None
-
+        self.flag = False
+    def matched(self):
+        if self.flag:
+            return True
+        else:
+            return False
     def output(self):
         # output = [self.sequence1.name,
         # self.sequence2.name,
@@ -61,21 +69,27 @@ class Comparison:
         stats_energyDelta.append(self.energyDelta)
         stats_editDistance.append(self.editDistance)
         stats_treeDistance.append(float(self.treeDistance))
-        if not self.xgmml.nodes.has_key(self.sequence1.name):
+        if not self.xgmml.nodes.has_key(self.sequence1.name): # if the xgmml data structure does not have this node add it
             self.xgmml.nodes[self.sequence1.name] = self.sequence1
-        if not self.xgmml.nodes.has_key(self.sequence2.name):
+        if not self.xgmml.nodes.has_key(self.sequence2.name): # if the xgmml data structure does not have this node add it
             self.xgmml.nodes[self.sequence2.name] = self.sequence2
+
+        harvested_nodes = {}
         if options.edgeType == 'both':
             if int(self.treeDistance) <= options.treeDistance:
                 self.xgmml.edges.append([self.sequence1.name, self.sequence2.name, self.treeDistance, 'treeDistance'])
+                self.flag = True
             if int(self.editDistance) <= options.editDistance:
                 self.xgmml.edges.append([self.sequence1.name, self.sequence2.name, self.treeDistance, 'editDistance'])
+                self.flag = True #have a match need to remove these from future consideration
         elif options.edgeType == 'edit':
             if int(self.editDistance) <= options.editDistance:
                 self.xgmml.edges.append([self.sequence1.name, self.sequence2.name, self.treeDistance, 'editDistance'])
+                self.flag = True #have a match need to remove these from future consideration
         elif options.edgeType == 'tree':
             if int(self.treeDistance) <= options.treeDistance:
                 self.xgmml.edges.append([self.sequence1.name, self.sequence2.name, self.treeDistance, 'treeDistance'])
+                self.flag = True #have a match need to remove these from future consideration
         else:
             print "Error in options %s not supported or recognized" % (options.editType,)
             parser.print_help()
@@ -92,6 +106,18 @@ class Sequence:
         self.ensembleFreeEnergy = None
         self.ensembleProbability = None
         self.ensembleDiversity = None
+        self.useForComparison = True
+
+    def full_output(self):
+        attrs = vars(self)
+        print "---"
+        print ','.join("%s:%s" %item for item in attrs.items())
+        print "+++"
+
+    def output (self):
+        print ">%s  SIZE=%s" %(self.name, self.clusterSize)
+        print "%s" % (self.sequence,)
+        print "%s" %(self.structure,)
 
 
 class XGMML:
@@ -147,23 +173,24 @@ def mymean(a):
     return float(sum(a)) / len(a)
 
 
-def processComparisons(comp):
+def processComparisons(comparisons):
     seqToTree = []
-    for c in comp:
+    for c in comparisons:
         seqToTree.append(c.sequence1.structure)
         seqToTree.append(c.sequence2.structure)
     treeDistance = RNAdistance("\n".join(seqToTree))
     treeDistance = treeDistance.strip("\n")  # take off last lr
     treeDistance = treeDistance.split("\n")
-    assert len(treeDistance) == len(comp)
-    for j in range(len(comp)):
-        comp[j].treeDistance = treeDistance[j].split(' ')[1]
-        comp[j].output()
+    assert len(treeDistance) == len(comparisons)
+    for j in range(len(comparisons)):
+        comparisons[j].treeDistance = treeDistance[j].split(' ')[1]
+        comparisons[j].output()
 
 
-sizere = re.compile("SIZE=(\d+)")
+sizere = re.compile("SIZE=(\d+)") #set up re for the cluster size
 fastaHandle = open(args[0], 'r')
-data = []
+data = [] #main data structure is a list of Sequence objects
+#use this if the input is in fasta format
 if options.fasta:
     for record in SeqIO.parse(fastaHandle, "fasta"):
         sequence = options.prefix + str(record.seq) + options.suffix
@@ -175,10 +202,12 @@ if options.fasta:
             size = sizere.search(record.description)
             size = size.group(1)
         except:
-            print "Not able to find size setting to 1"
+            print "Not able to find size, setting to 1"
+
         thisseq = Sequence(record.id, size, sequence)
         tmp = RNAFold(sequence, options.version)
         tmp = tmp.split("\n")
+        print tmp
         thisseq.structure, thisseq.freeEnergy = tmp[1].split(' (')
         thisseq.freeEnergy = abs(float(thisseq.freeEnergy.replace(')', '')))
         thisseq.ensembleFreeEnergy = abs(float(tmp[2].split('[')[1].replace(']', '')))
@@ -187,13 +216,21 @@ if options.fasta:
             float(tmp[4].split(';')[0].replace(' frequency of mfe structure in ensemble ', '')))
         thisseq.ensembleDiversity = abs(float(tmp[4].split(';')[1].replace(' ensemble diversity ', '')))
         data.append(thisseq)
-else:
+
+
+else: #use this if the data is not in fasta format
     while True:
         try:
             header, sequence, structure = list(
                 islice(fastaHandle, 3))  # need to move through a triplet file structure not fasta
         except ValueError:
             break
+        sequence = sequence.strip('\n')
+        sequence = sequence.strip('\r')
+        structure = structure.strip('\n')
+        structure = structure.strip('\r')
+        if not structure.count('(') == structure.count(')'):
+            continue
         sequence = options.prefix + sequence + options.suffix
         if not options.rna:
             sequence = sequence.replace('T', 'U')
@@ -203,6 +240,8 @@ else:
             size = size.group(1)
         except:
             print "Not able to find size setting to 1"
+        header = header.replace('>','')
+        header = header.split('SIZE=')[0]
         thisseq = Sequence(header, size, sequence)
         thisseq.freeEnergy = 1
         thisseq.ensembleFreeEnergy = 1
@@ -210,18 +249,50 @@ else:
         thisseq.ensembleDiversity = 1
         thisseq.structure = structure
         data.append(thisseq)
+
 xgmml = XGMML(sys.argv[1])
-comparisons = []
-for x in range(0, len(data)):
-    for y in range(x + 1, len(data)):
-        comp = Comparison(data[x], data[y], xgmml)
-        comparisons.append(comp)
-        comp.energyDelta = abs(comp.sequence1.freeEnergy - comp.sequence2.freeEnergy)
-        comp.editDistance = distance(comp.sequence1.sequence, comp.sequence2.sequence)  # Lev edit distance
-        if len(comparisons) > 10000:
-            processComparisons(comparisons)
-            comparisons = []
-processComparisons(comparisons)
+#data structure should now be populated, now need to move through and find all the connections
+if options.seed:
+    past_harvested_nodes = {} #only used for seed algo but collected in all cases
+    while len(data)>2:
+        data[0].useForComparison = False
+        comparisons = []
+        for x in range(1, len(data)-1): #go through and find all the matches, then remove matches and start again till gone
+            comp = Comparison(data[0], data[x], xgmml)
+            comp.energyDelta = abs(comp.sequence1.freeEnergy - comp.sequence2.freeEnergy)
+            # distance function imported from from Levenshtein
+            comp.editDistance = distance(comp.sequence1.sequence, comp.sequence2.sequence)
+            comparisons.append(comp)
+        processComparisons(comparisons)
+        for c in comparisons:
+            if c.matched():
+                c.sequence2.useForComparison = False
+        newData = []
+        for d in data:
+            if d.useForComparison == True:
+                newData.append(d)
+        print "%s reduced to %s " %(len(data),len(newData))
+        data = newData
+
+
+
+
+else:
+    comparisons = []
+    for d in data: #prints out all the sequences and structures
+            print d.output()
+    for x in range(0, len(data)): #this makes the edges
+        for y in range(x + 1, len(data)):
+            comp = Comparison(data[x], data[y], xgmml)
+            comp.energyDelta = abs(comp.sequence1.freeEnergy - comp.sequence2.freeEnergy)
+            # distance function imported from from Levenshtein
+            comp.editDistance = distance(comp.sequence1.sequence, comp.sequence2.sequence)
+            comparisons.append(comp)
+
+            if len(comparisons) > 10000: #group things in batches of 10000  to find tree distances
+                processComparisons(comparisons)
+                comparisons = [] #zero out the comparisons array and start refilling again
+    processComparisons(comparisons) #flush out the last of the tree distance comparisons
 
 if options.write == 'y':
     cytoscapeOut = open(args[0] + ".xgmml", 'w')
