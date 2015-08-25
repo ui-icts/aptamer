@@ -87,7 +87,7 @@ class Comparison:
                 self.xgmml.edges.append([self.sequence1.name, self.sequence2.name, self.treeDistance, 'treeDistance'])
                 self.flag = True
             if int(self.editDistance) <= options.editDistance:
-                self.xgmml.edges.append([self.sequence1.name, self.sequence2.name, self.treeDistance, 'editDistance'])
+                self.xgmml.edges.append([self.sequence1.name, self.sequence2.name, self.editDistance, 'editDistance'])
                 self.flag = True  # have a match need to remove these from future consideration
         elif options.edgeType == 'edit':
             if int(self.editDistance) <= options.editDistance:
@@ -141,13 +141,13 @@ class XGMML:
         for n in self.nodes:
             string += """<node id="%s" label="%s" weight="%s" >\n""" % (
                 n, self.nodes[n].name, self.nodes[n].clusterSize)
-            string += """<att type="integer" name="size" value="%s" />\n""" % (self.nodes[n].clusterSize,)
-            string += """<att name="structure" value="%s" />\n""" % (self.nodes[n].structure,)
-            string += """<att name="sequence" value="%s" /> \n""" % (self.nodes[n].sequence,)
-            string += """<att name="energy" value="%s" /> \n""" % (self.nodes[n].freeEnergy,)
-            string += """<att name="ensembleFreeEnergy" value="%s" /> \n""" % (self.nodes[n].ensembleFreeEnergy,)
-            string += """<att name="ensembleProbability" value="%s" /> \n""" % (self.nodes[n].ensembleProbability,)
-            string += """<att name="ensembleDiversity" value="%s" /> \n""" % (self.nodes[n].ensembleDiversity,)
+            string += """<att type="integer" name="size" label="Size" value="%s" />\n""" % (self.nodes[n].clusterSize,)
+            string += """<att type="string" label="Structure" name="structure" value="%s" />\n""" % (self.nodes[n].structure,)
+            string += """<att type="string" label="Sequence" name="sequence" value="%s" /> \n""" % (self.nodes[n].sequence,)
+            string += """<att type="real" label="Energy" name="energy" value="%s" /> \n""" % (self.nodes[n].freeEnergy,)
+            string += """<att type="real" label="ensemble Free Energy" name="ensembleFreeEnergy" value="%s" /> \n""" % (self.nodes[n].ensembleFreeEnergy,)
+            string += """<att type="real" label="ensemble Probability" name="ensembleProbability" value="%s" /> \n""" % (self.nodes[n].ensembleProbability,)
+            string += """<att type="real" label="ensemble Diversity" name="ensembleDiversity" value="%s" /> \n""" % (self.nodes[n].ensembleDiversity,)
             string += "</node>\n"
         for e in self.edges:
             string += """<edge source="%s" target="%s" label="%s to %s" >\n\
