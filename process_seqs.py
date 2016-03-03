@@ -1,14 +1,17 @@
 #!/usr/bin/python
 
 """
-Create graph from a set of RNA sequences.
+Calculates RNA structures, or creates graph from a set of RNA sequences 
+with known structures.
 
-Vertices are RNA sequences.
-Edges are created between vertices that have a small enough
+If RNA structures are not already known, outputs a fasta structure file
+using structures determined via either ViennaRNA or mfold. (See args.)
+
+Otherwise, outputs an xgmml graph file in which vertices are RNA 
+sequences. Edges are created between vertices that have a small enough
 tree distance or edit distance between them. (Specified in args.)
 
-Outputs an xgmml graph file. Overall statistics are printed to
-standard output.
+Overall statistics are printed to standard output.
 """
 
 import os
@@ -36,7 +39,6 @@ class RNASequence:
         self.ensemble_probability = None
         self.ensemble_diversity = None
         self.use_for_comparison = True  # used only with seed option
-        self.mfold_structure = None
 
     def full_output(self):
         attrs = vars(self)
@@ -81,20 +83,20 @@ class RNASequencePair:
                 self.edit_distance and
                 (int(self.edit_distance) <= args.max_edit_dist)
             ):
-                self.xgmml.edges.append([
+                self.xgmml.edges.append((
                     self.sequence1.name, self.sequence2.name,
-                    self.edit_distance, 'edit_distance'
-                ])
+                    'edit_distance', self.edit_distance
+                ))
                 self.is_valid_edge = True
         if args.edge_type in ['tree', 'both']:
             if (
                 self.tree_distance and
                 (int(self.tree_distance) <= args.max_tree_dist)
             ):
-                self.xgmml.edges.append([
+                self.xgmml.edges.append((
                     self.sequence1.name, self.sequence2.name,
-                    self.tree_distance, 'tree_distance'
-                ])
+                    'tree_distance', self.tree_distance
+                ))
                 self.is_valid_edge = True
 
 
@@ -106,7 +108,7 @@ class XGMML:
         self.nodes = {}
 
         # list of tuples
-        # (source ID, target ID, attribute value, attribute name)
+        # (source ID, target ID, attribute name, attribute value)
         self.edges = []
 
     def output_att(self, type_, name, label, value):
@@ -138,11 +140,6 @@ class XGMML:
             self.output_att(
                 'string', 'structure', 'Structure', self.nodes[n].structure
             )
-            if args.run_mfold:
-                self.output_att(
-                    'string', 'mfoldStructure', 'mfold Structure',
-                    self.nodes[n].mfold_structure
-                )
             self.output_att(
                 'string', 'sequence', 'Sequence', self.nodes[n].sequence
             )
@@ -164,12 +161,13 @@ class XGMML:
             self.out_str += '</node>\n'
 
         for e in self.edges:
+            source, target, att_name, att_value = e
             self.out_str += (
                 '<edge source="%s" target="%s" label="%s to %s" >\n' % (
-                    e[0], e[1], e[0], e[1]
+                    source, target, source, target
                 )
             )
-            self.output_att('string', e[3], 'interaction', e[2])
+            self.output_att('string', att_name, 'interaction', att_value)
             self.out_str += '</edge>\n'
         self.out_str += '</graph>\n'
         return self.out_str
@@ -183,36 +181,53 @@ def main():
     in_fname = args.input_file
     in_fh = open(in_fname)
 
-    # stats to be used if the input is in fasta format
-    # stats are given default values if input is non-fasta
+    # stats to be used if predicting structures
+    # stats are given default values otherwise
     stats = {'energy_delta':[], 'edit_distance':[], 'tree_distance':[]}
 
     rna_seq_objs = []  # list of RNASequence objects (graph vertices)
-    if not args.no_fasta:
-        process_fasta(in_fh, args, cluster_size_re, rna_seq_objs)
-    else:
-        process_non_fasta(in_fh, args, cluster_size_re, rna_seq_objs)
 
+    if args.calc_structures:
+        process_fasta(in_fh, args, cluster_size_re, rna_seq_objs)
+        # output fasta with structure line
+        if args.output:
+            out_fasta_fname = args.output
+        else:
+            out_fasta_fname = in_fname + '.struct.fa'
+        with open(out_fasta_fname, 'w') as out_fasta_f:
+            for node in rna_seq_objs:
+                out_fasta_f.write(
+                    '>%s  SIZE=%d\n%s\n%s\n' % (
+                        node.name, node.cluster_size, node.sequence,
+                        node.structure
+                    )
+                )
+    process_struct_fasta(in_fh, args, cluster_size_re, rna_seq_objs)
     xgmml_obj = XGMML(in_fname)
 
-    # node data structures are now populated. find edges.
-    print 'Finding edges...'
+    # nodes are now populated. find edges.
+    if args.calc_structures:
+        print 'Calculating stats...'
+    else:
+        print 'Finding edges...'
     if args.seed:
         find_edges_seed(rna_seq_objs, xgmml_obj, args, stats)
     else:
         find_edges_no_seed(rna_seq_objs, xgmml_obj, args, stats)
 
-    # output xgmml file
-    out_xgmml_fname = in_fname + '.xgmml'
-    if not args.no_xgmml:
-        cystoscape_out = open(out_xgmml_fname, 'w')
-        cystoscape_out.write(xgmml_obj.output(args))
-        cystoscape_out.close()
+    if not args.calc_structures:
+        # output xgmml file
+        if args.output:
+            out_xgmml_fname = args.output
+        else:
+            out_xgmml_fname = in_fname + '.xgmml'
+        with open(out_xgmml_fname, 'w') as out_xgmml_f:
+            out_xgmml_f.write(xgmml_obj.output(args))
 
     print_stats(stats, args)
-
-    if not args.no_xgmml:
-        print '\n\nOutput written to %s.' % out_xgmml_fname
+    print '\n\nOutput written to %s.' % (
+        out_fasta_fname if (args.calc_structures) else out_xgmml_fname
+    )
 
     in_fh.close()
 
@@ -220,16 +235,64 @@ def main():
 def parse_arguments():
     parser = argparse.ArgumentParser(
         description=(
-            '%s: Create xgmml graph and calculate statistics '
-            'from a set of RNA sequences.' % (
+            '%s: Predict RNA structures, or create graph from a set '
+            'of RNA sequences with already-predicted structures.' % (
                 os.path.basename(sys.argv[0])
             )
         )
     )
     parser.add_argument(
         'input_file', help=(
-            'Input file containing RNA sequences. (Preferably in '
-            'fasta format.)'
+            'Input fasta containing RNA sequences. Specify -c iff '
+            'this file does not contain a bracket-dot structure line.'
+        )
+    )
+    parser.add_argument(
+        '-c', '--calc_structures', action='store_true', default=False,
+        help=(
+            'Input fasta does not have bracket-dot structures. '
+            'If specified, will output a fasta with bracket-dot '
+            'structures. Otherwise, will use already-predicted '
+            'structures to produce a graph.'
+        )
+    )
+    parser.add_argument(
+        '-o', '--output', help=(
+            'Specify path of output file. '
+            'If -c is specified, this will be a fasta file '
+            'with structure line. '
+            'Otherwise, this will be an xgmml graph file. '
+            '(Default: <input_filename>.struct.fa if -c, '
+            '<input_filename>.xgmml otherwise.)'
+        )
+    )
+    parser.add_argument(
+        '-m', '--run_mfold', action='store_true', default=False,
+        help=(
+            'Run mfold instead of to Vienna RNAFold to predict '
+            'RNA structures. Note: some graph attributes will '
+            'be omitted.'
+        )
+    )
+    parser.add_argument(
+        '-v', '--vienna_version', type=int, default=2,
+        help=(
+            'ViennaRNA package version. Specify "1" or "2". '
+            '(Default: 2)'
+        )
+    )
+    parser.add_argument(
+        '-p', '--prefix', default='GGGAGGACGAUGCGG', help=(
+            'Sequence to prepend to RNA sequences during '
+            'structure prediction. '
+            '(Default: GGGAGGACGAUGCG)'
+        )
+    )
+    parser.add_argument(
+        '-s', '--suffix', default='CAGACGACUCGCCCGA', help= (
+            'Sequence to append to RNA sequences during '
+            'structure prediction. '
+            '(Default: CAGACGACUCGCCCGA)'
         )
     )
     parser.add_argument(
@@ -256,49 +319,14 @@ def parse_arguments():
         )
     )
     parser.add_argument(
-        '-v', '--vienna_version', type=int, default=2,
-        help=(
-            'ViennaRNA package version. Specify "1" or "2". '
-            '(Default: 2)'
-        )
-    )
-    parser.add_argument(
-        '-m', '--run_mfold', action='store_true', default=False,
-        help=(
-            'Run mfold (in addition to Vienna RNAFold) to predict '
-            'RNA structure.'
-        )
-    )
-    parser.add_argument(
-        '-p', '--prefix', default='GGGAGGACGAUGCGG', help=(
-            'Sequence to prepend to RNA sequences during '
-            'structure prediction. '
-            '(Default: GGGAGGACGAUGCG)'
-        )
-    )
-    parser.add_argument(
-        '-s', '--suffix', default='CAGACGACUCGCCCGA', help= (
-            'Sequence to append to RNA sequences during '
-            'structure prediction. '
-            '(Default: CAGACGACUCGCCCGA)'
-        )
-    )
-    parser.add_argument(
         '--seed', action='store_true', default=False,
-        help='Use seed sequence algorithm to find edges.'
+        help='Use seed sequence algorithm to find graph edges.'
     )
-    parser.add_argument(
-        '--no_fasta', action='store_true', default=False,
-        help=(
-            'Do not process input as fasta. '
-            '(Some statistics will not be calculated.)'
-        )
-    )
-    parser.add_argument(
-        '--no_xgmml', action='store_true', default=False,
-        help='Do not produce XGMML output file.'
-    )
-    parser.usage = parser.print_help()
+
+    if len(sys.argv) <= 1:
+        parser.print_help()
+        print '\nError: Input file not specified.'
+        sys.exit(1)
 
     args = parser.parse_args()
 
@@ -359,9 +387,11 @@ def run_mfold(seq):
         )
         sys.exit(ret)
     print
-    mfold_structure = convert_ct_to_bracket_dot('%s.ct' % temp_filename)
+    structure = convert_ct_to_bracket_dot('%s.ct' % temp_filename)
     os.chdir('..')
-    return mfold_structure
+    struc, energy = structure.split()
+    energy = float(energy.strip('()'))
+    return struc, energy
 
 
 def rna_distance(structures):
@@ -377,11 +407,11 @@ def rna_distance(structures):
 def process_seq_pairs(seq_pairs, args, stats):
     """Runs a batch of RNASequence pairs."""
     #print '\n\n'.join([str(z) for z in seq_pairs])
-    seqToTree = []
+    seq_to_tree = []
     for x in seq_pairs:
-        seqToTree.append(x.sequence1.structure)
-        seqToTree.append(x.sequence2.structure)
-    tree_distance = rna_distance('\n'.join(seqToTree))
+        seq_to_tree.append(x.sequence1.structure)
+        seq_to_tree.append(x.sequence2.structure)
+    tree_distance = rna_distance('\n'.join(seq_to_tree))
     tree_distance = tree_distance.strip('\n').split('\n')  # take off last lr
     assert len(tree_distance) == len(seq_pairs)
     for i, x in enumerate(seq_pairs):
@@ -416,6 +446,9 @@ def process_fasta(in_fh, args, cluster_size_re, rna_seq_objs):
     objects.
     """
     for record in SeqIO.parse(in_fh, 'fasta'):
+        # sequence = '%s%s%s'.replace('T', 'U') % (
+        #     args.prefix, re.sub('[^GATCU]', '', str(record.seq)), args.suffix
+        # )
         sequence = '%s%s%s'.replace('T', 'U') % (
             args.prefix, str(record.seq), args.suffix
         )
@@ -428,38 +461,40 @@ def process_fasta(in_fh, args, cluster_size_re, rna_seq_objs):
         if cluster_size is None:
             cluster_size = 1
 
+        # find structure
         curr_seq = RNASequence(record.id, cluster_size, sequence)
-        rnafold_out = run_rnafold(sequence, args.vienna_version)
-        rnafold_out = rnafold_out.split('\n')
-        print '%s\n' % rnafold_out
-        curr_seq.structure, curr_seq.free_energy = (
-            rnafold_out[1].split(' (')
-        )
-        curr_seq.free_energy = abs(
-            float(curr_seq.free_energy.replace(')', ''))
-        )
-        curr_seq.ensemble_free_energy = abs(
-            float(rnafold_out[2].split('[')[1].replace(']', ''))
-        )
-        curr_seq.ensemble_probability = abs(float(
-            rnafold_out[4].split(';')[0].replace(
-                ' frequency of mfe structure in ensemble ', ''
-            )
-        ))
-        curr_seq.ensemble_diversity = abs(float(
-            rnafold_out[4].split(';')[1].replace(
-                ' ensemble diversity ', ''
-            )
-        ))
-        rna_seq_objs.append(curr_seq)
         if args.run_mfold:
-            mfold_structure = run_mfold(sequence)
-            curr_seq.mfold_structure = mfold_structure
+            curr_seq.structure, curr_seq.free_energy = run_mfold(sequence)
+            curr_seq.ensemble_free_energy = 1
+            curr_seq.ensemble_probability = 1
+            curr_seq.ensemble_diversity = 1
         else:
-            curr_seq.mfold_structure = None
+            rnafold_out = run_rnafold(sequence, args.vienna_version)
+            rnafold_out = rnafold_out.split('\n')
+            print '%s\n' % rnafold_out
+            curr_seq.structure, curr_seq.free_energy = (
+                rnafold_out[1].split(' (')
+            )
+            curr_seq.free_energy = abs(
+                float(curr_seq.free_energy.replace(')', ''))
+            )
+            curr_seq.ensemble_free_energy = abs(
+                float(rnafold_out[2].split('[')[1].replace(']', ''))
+            )
+            curr_seq.ensemble_probability = abs(float(
+                rnafold_out[4].split(';')[0].replace(
+                    ' frequency of mfe structure in ensemble ', ''
+                )
+            ))
+            curr_seq.ensemble_diversity = abs(float(
+                rnafold_out[4].split(';')[1].replace(
+                    ' ensemble diversity ', ''
+                )
+            ))
+        rna_seq_objs.append(curr_seq)
 
 
-def process_non_fasta(in_fh, args, cluster_size_re, rna_seq_objs):
+def process_struct_fasta(in_fh, args, cluster_size_re, rna_seq_objs):
     """Process non-fasta input file. Populate RNASequence
     (graph vertex) objects.
     """
@@ -498,15 +533,16 @@ def process_non_fasta(in_fh, args, cluster_size_re, rna_seq_objs):
 
 def find_edges_seed(rna_seq_objs, xgmml_obj, args, stats):
     """Find graph edges using seed algorithm."""
-    while len(rna_seq_objs) > 2:
-        rna_seq_objs[0].use_for_comparison = False
+    nodes_copy = rna_seq_objs
+    while len(nodes_copy) > 2:
+        nodes_copy[0].use_for_comparison = False
         seq_pairs = []
          # go through and find all the matches
          # then remove matches and start again till gone
-        for x in range(1, len(rna_seq_objs) - 1):
-            # new rna_seq_objs[0] each time a node is deleted
+        for x in range(1, len(nodes_copy) - 1):
+            # new nodes_copy[0] each time a node is deleted
             pair = RNASequencePair(
-                rna_seq_objs[0], rna_seq_objs[x], xgmml_obj
+                nodes_copy[0], nodes_copy[x], xgmml_obj
             )
             pair.energy_delta = abs(
                 pair.sequence1.free_energy - pair.sequence2.free_energy
@@ -520,13 +556,13 @@ def find_edges_seed(rna_seq_objs, xgmml_obj, args, stats):
             if x.is_valid_edge:
                 x.sequence2.use_for_comparison = False
         # delete nodes which already belong to an edge
-        new_rna_seq_objs = [
-            z for z in rna_seq_objs if z.use_for_comparison
+        new_nodes_copy = [
+            z for z in nodes_copy if z.use_for_comparison
         ]
         print 'Number of RNA sequences reduced from %d to %d ' % (
-            len(rna_seq_objs), len(new_rna_seq_objs)
+            len(nodes_copy), len(new_nodes_copy)
         )
-        rna_seq_objs = new_rna_seq_objs
+        nodes_copy = new_nodes_copy
 
 
 def find_edges_no_seed(rna_seq_objs, xgmml_obj, args, stats):
@@ -573,7 +609,7 @@ def print_stats(stats, args):
         print 'Pearson correlation(%s, %s):' % (
             stat_pair[0], stat_pair[1]
         ),
-        if not args.no_fasta:
+        if args.calc_structures:
             pearson_coeff, p_value = scipy.stats.pearsonr(
                 stats[stat_pair[0]], stats[stat_pair[1]]
             )
