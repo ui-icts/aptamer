@@ -1,0 +1,130 @@
+#!/usr/bin/python
+
+"""
+Creates a graph from a set of RNA sequences with already-predicted
+structures.
+
+Outputs an xgmml graph file in which vertices are RNA 
+sequences. Edges are created between vertices that have a small enough
+tree distance or edit distance between them. (Specified in args.)
+"""
+
+
+import os
+import sys
+import re
+import subprocess
+import itertools
+import textwrap
+import argparse
+import numpy
+import scipy.stats
+from Bio import SeqIO
+import Levenshtein
+
+from aptamer_functions import *
+
+
+def main():
+    args = parse_arguments()
+    cluster_size_re = re.compile('SIZE=(\d+)')
+    in_fname = args.input_file
+    in_fh = open(in_fname)
+    stats = {'energy_delta':[], 'edit_distance':[], 'tree_distance':[]}
+    rna_seq_objs = []  # list of RNASequence objects (graph vertices)
+
+    process_struct_fasta(in_fh, args, cluster_size_re, rna_seq_objs)
+    xgmml_obj = XGMML(in_fname)
+
+    # nodes are now populated. find edges.
+    print 'Finding edges...'
+    if args.seed:
+        find_edges_seed(rna_seq_objs, xgmml_obj, args, stats)
+    else:
+        find_edges_no_seed(rna_seq_objs, xgmml_obj, args, stats)
+
+    # output xgmml file
+    if args.output:
+        out_xgmml_fname = args.output
+    else:
+        out_xgmml_fname = in_fname + '.xgmml'
+    with open(out_xgmml_fname, 'w') as out_xgmml_f:
+        out_xgmml_f.write(xgmml_obj.output(args))
+
+    print_stats(stats, args)
+    print '\n\nOutput written to %s.' % (
+        out_fasta_fname if (args.calc_structures) else out_xgmml_fname
+    )
+
+    in_fh.close()
+
+
+def parse_arguments():
+    parser = argparse.ArgumentParser(
+        description=(
+            '%s: Create a graph from a set of RNA sequences with '
+            'already-predicted structures.' % os.path.basename(sys.argv[0])
+        )
+    )
+    parser.add_argument(
+        'input_file', help=(
+            'Input fasta containing RNA sequences. '
+            'Must contain a bracket-dot structure line.'
+        )
+    )
+    parser.add_argument(
+        '-o', '--output', help=(
+            'Specify path of output xgmml graph file. '
+            '(Default: <input_filename>.xgmml)'
+        )
+    )
+    parser.add_argument(
+        '-t', '--edge_type', default='both', help=(
+            'Whether to create edges in output graph according to '
+            'edit distance or tree distance.'
+            '(Specify "edit", "tree", or "both".) (Default: both)'
+        )
+    )
+    parser.add_argument(
+        '-e', '--max_edit_dist', type=int, default=3,
+        help=(
+            'Maximum edit distance allowed for an edge to be created '
+            'in output graph. '
+            'Assumes --edge_type is "edit" or "both". (Default: 3)'
+        )
+    )
+    parser.add_argument(
+        '-d', '--max_tree_dist', type=int, default=3,
+        help=(
+            'Maximum tree distance allowed for an edge to be created '
+            'in output graph. '
+            'Assumes --edge_type is "tree" or "both". (Default: 3)'
+        )
+    )
+    parser.add_argument(
+        '--seed', action='store_true', default=False,
+        help='Use seed sequence algorithm to find graph edges.'
+    )
+
+    if len(sys.argv) <= 1:
+        parser.print_help()
+        print '\nError: Input file not specified.'
+        sys.exit(1)
+
+    args = parser.parse_args()
+
+    # validate args
+    args.edge_type = args.edge_type.lower()
+    if args.edge_type not in ['edit', 'tree', 'both']:
+        parser.print_help()
+        print 'Error: Edge type option not recognized: %s' % (
+            args.edge_type
+        )
+        sys.exit(1)
+
+    args.calc_structures = False
+
+    return args
+
+if __name__ == '__main__':
+    sys.exit(main())
