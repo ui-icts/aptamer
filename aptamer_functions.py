@@ -211,7 +211,7 @@ def run_mfold(seq):
         sys.exit(ret)
     print
     structure = convert_ct_to_bracket_dot('%s.ct' % temp_filename)
-    energy_stats = get_rna_stats('%s.det' %temp_filename)
+    energy_stats = get_mfold_stats('%s.det' %temp_filename)
     os.chdir('..')
     struc, energy = structure.split()
     energy = float(energy.strip('()'))
@@ -248,7 +248,7 @@ def process_seq_pairs(seq_pairs, args, stats):
         except ValueError:
             stats['tree_distance'].append(None)
 
-def get_rnafold_stats(det_filename):
+def get_mfold_stats(det_filename):
     valid_pattern = {0:'dG',1:"=",3:"dH",4:"=",6:"dS",7:"=",9:"Tm",10:"="} #fixed values within line
     energy_stats = {}
     for key,value in valid_pattern.iteritems():
@@ -259,7 +259,7 @@ def get_rnafold_stats(det_filename):
             if i == 5: #6th line
                 row = row.split()
                 test_pattern = [row[x] ==  valid[x] for x in valid]
-                assert False not in test_pattern, "RNAfold file *.txt.det does not match the expected format"
+                assert False not in test_pattern, "mfold file *.txt.det does not match the expected format"
                 for x in valid_pattern:
                     energy_stats[row[x]] = row[x+2] 
     return energy_stats
