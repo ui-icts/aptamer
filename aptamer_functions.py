@@ -33,6 +33,7 @@ class RNASequence:
         self.sequence = seq
         self.structure = None
         self.free_energy = None
+        self.energy_dict = {}
         self.ensemble_free_energy = None
         self.ensemble_probability = None
         self.ensemble_diversity = None
@@ -121,7 +122,7 @@ class XGMML:
             """
             <?xml version="1.0"?>
             <graph directed="1" id="5" label="%s"
-            xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+            xmlns:xsi="http:///www.w3.org/2001/XMLSchema-instance"
             xmlns:ns1="http://www.w3.org/1999/xlink"
             xmlns:dc="http://purl.org/dc/elements/1.1/"
             xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
@@ -210,6 +211,7 @@ def run_mfold(seq):
         sys.exit(ret)
     print
     structure = convert_ct_to_bracket_dot('%s.ct' % temp_filename)
+    energy_stats = get_rna_stats('%s.det' %temp_filename)
     os.chdir('..')
     struc, energy = structure.split()
     energy = float(energy.strip('()'))
@@ -246,6 +248,21 @@ def process_seq_pairs(seq_pairs, args, stats):
         except ValueError:
             stats['tree_distance'].append(None)
 
+def get_rnafold_stats(det_filename):
+    valid_pattern = {0:'dG',1:"=",3:"dH",4:"=",6:"dS",7:"=",9:"Tm",10:"="} #fixed values within line
+    energy_stats = {}
+    for key,value in valid_pattern.iteritems():
+        if value !=  '=':
+            energy_stats[value] = None
+    with open(det_filename) as f:
+        for i,row in enumerate(f):
+            if i == 5: #6th line
+                row = row.split()
+                test_pattern = [row[x] ==  valid[x] for x in valid]
+                assert False not in test_pattern, "RNAfold file *.txt.det does not match the expected format"
+                for x in valid_pattern:
+                    energy_stats[row[x]] = row[x+2] 
+    return energy_stats
 
 def convert_ct_to_bracket_dot(ct_filename):
     bracket_dot = ''
@@ -253,14 +270,14 @@ def convert_ct_to_bracket_dot(ct_filename):
         for row in f:
             row = row.split()
             if '=' in row and len(row) < 6:  # first row
-                energy = row[3]
+                pass #used to grab energy but not needed except to skip first line
             elif row[4] == '0':
                 bracket_dot += '.'
             elif int(row[0]) < int(row[4]):
                 bracket_dot += '('
             elif int(row[0]) > int(row[4]):
                 bracket_dot += ')'
-    return '%s (%s)' % (bracket_dot, energy) if (bracket_dot != '') else None
+    return '%s' % (bracket_dot) if (bracket_dot != '') else None
 
 
 def process_fasta(in_fh, args, cluster_size_re, rna_seq_objs):
@@ -286,10 +303,7 @@ def process_fasta(in_fh, args, cluster_size_re, rna_seq_objs):
         # find structure
         curr_seq = RNASequence(record.id, cluster_size, sequence)
         if args.run_mfold:
-            curr_seq.structure, curr_seq.free_energy = run_mfold(sequence)
-            curr_seq.ensemble_free_energy = 1
-            curr_seq.ensemble_probability = 1
-            curr_seq.ensemble_diversity = 1
+            curr_seq.structure, curr_seq.energy_dict = run_mfold(sequence)
         else:
             rnafold_out = run_rnafold(sequence, args.vienna_version)
             rnafold_out = rnafold_out.split('\n')

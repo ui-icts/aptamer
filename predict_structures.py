@@ -17,7 +17,6 @@ import textwrap
 import argparse
 import numpy
 import scipy.stats
-from Bio import SeqIO
 import Levenshtein
 
 from aptamer_functions import *
