@@ -213,9 +213,7 @@ def run_mfold(seq):
     structure = convert_ct_to_bracket_dot('%s.ct' % temp_filename)
     energy_stats = get_mfold_stats('%s.det' %temp_filename)
     os.chdir('..')
-    struc, energy = structure.split()
-    energy = float(energy.strip('()'))
-    return struc, energy
+    return structure, energy_stats
 
 
 def rna_distance(structures):
@@ -237,7 +235,7 @@ def process_seq_pairs(seq_pairs, args, stats):
         seq_to_tree.append(x.sequence2.structure)
     tree_distance = rna_distance('\n'.join(seq_to_tree))
     tree_distance = tree_distance.strip('\n').split('\n')  # take off last lr
-    assert len(tree_distance) == len(seq_pairs)
+    assert len(tree_distance) == len(seq_pairs), "Error length of tree distance %s does not match length of seq_pairs %s and should --check installation of RNAdistance" %(len(tree_distance), len(seq_pairs))
     for i, x in enumerate(seq_pairs):
         seq_pairs[i].tree_distance = tree_distance[i].split(' ')[1]
         x.output(args)
@@ -258,7 +256,7 @@ def get_mfold_stats(det_filename):
         for i,row in enumerate(f):
             if i == 5: #6th line
                 row = row.split()
-                test_pattern = [row[x] ==  valid[x] for x in valid]
+                test_pattern = [row[x] ==  valid_pattern[x] for x in valid_pattern]
                 assert False not in test_pattern, "mfold file *.txt.det does not match the expected format"
                 for x in valid_pattern:
                     energy_stats[row[x]] = row[x+2] 
@@ -304,6 +302,7 @@ def process_fasta(in_fh, args, cluster_size_re, rna_seq_objs):
         curr_seq = RNASequence(record.id, cluster_size, sequence)
         if args.run_mfold:
             curr_seq.structure, curr_seq.energy_dict = run_mfold(sequence)
+            curr_seq.free_energy = curr_seq.energy_dict['dG']
         else:
             rnafold_out = run_rnafold(sequence, args.vienna_version)
             rnafold_out = rnafold_out.split('\n')
@@ -414,7 +413,7 @@ def find_edges_no_seed(rna_seq_objs, xgmml_obj, args, stats):
                 rna_seq_objs[i], rna_seq_objs[j], xgmml_obj
             )
             pair.energy_delta = abs(
-                pair.sequence1.free_energy - pair.sequence2.free_energy
+                float(pair.sequence1.free_energy) - float(pair.sequence2.free_energy)
             )
             pair.edit_distance = Levenshtein.distance(
                 pair.sequence1.sequence, pair.sequence2.sequence
