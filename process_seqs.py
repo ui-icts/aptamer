@@ -29,9 +29,9 @@ import Levenshtein
 
 class RNASequence:
     """Graph node."""
-    def __init__(self, name, cluster_size, seq):
+    def __init__(self, name,  seq):
         self.name = name  # integer ID
-        self.cluster_size = int(cluster_size)
+        self.cluster_size = None
         self.sequence = seq
         self.structure = None
         self.free_energy = None
@@ -45,7 +45,7 @@ class RNASequence:
         print ','.join('%s:%s' % item for item in attrs.items())
 
     def output(self):
-        print '>%s  SIZE=%s' % (self.name, self.cluster_size)
+        print '>%s ' % (self.name )
         print self.sequence
         print self.structure
 
@@ -131,12 +131,13 @@ class XGMML:
             """ % self.name
         ).lstrip()
         for n in self.nodes:
-            self.out_str += '<node id="%s" label="%s" weight="%s">\n' % (
-                n, self.nodes[n].name, self.nodes[n].cluster_size
+            self.out_str += '<node id="%s" label="%s">\n' % (
+                n, self.nodes[n].name
             )
-            self.output_att(
-                'integer', 'size', 'Size', self.nodes[n].cluster_size
-            )
+            if not self.nodes[n] == None:
+                self.output_att(
+                    'integer', 'size', 'Size', self.nodes[n].cluster_size
+                )
             self.output_att(
                 'string', 'structure', 'Structure', self.nodes[n].structure
             )
@@ -177,7 +178,6 @@ class XGMML:
 def main():
     args = parse_arguments()
 
-    cluster_size_re = re.compile('SIZE=(\d+)')
     in_fname = args.input_file
     in_fh = open(in_fname)
 
@@ -188,7 +188,7 @@ def main():
     rna_seq_objs = []  # list of RNASequence objects (graph vertices)
 
     if args.calc_structures:
-        process_fasta(in_fh, args, cluster_size_re, rna_seq_objs)
+        process_fasta(in_fh, args, rna_seq_objs)
         # output fasta with structure line
         if args.output:
             out_fasta_fname = args.output
@@ -197,12 +197,12 @@ def main():
         with open(out_fasta_fname, 'w') as out_fasta_f:
             for node in rna_seq_objs:
                 out_fasta_f.write(
-                    '>%s  SIZE=%d\n%s\n%s\n' % (
-                        node.name, node.cluster_size, node.sequence,
+                    '>%s  \n%s\n%s\n' % (
+                        node.name,  node.sequence,
                         node.structure
                     )
                 )
-    process_struct_fasta(in_fh, args, cluster_size_re, rna_seq_objs)
+    process_struct_fasta(in_fh, args,  rna_seq_objs)
     xgmml_obj = XGMML(in_fname)
 
     # nodes are now populated. find edges.
@@ -441,7 +441,7 @@ def convert_ct_to_bracket_dot(ct_filename):
     return '%s (%s)' % (bracket_dot, energy) if (bracket_dot != '') else None
 
 
-def process_fasta(in_fh, args, cluster_size_re, rna_seq_objs):
+def process_fasta(in_fh, args,  rna_seq_objs):
     """Process input file as fasta. Populate RNASequence (graph vertex)
     objects.
     """
@@ -452,17 +452,9 @@ def process_fasta(in_fh, args, cluster_size_re, rna_seq_objs):
         sequence = '%s%s%s'.replace('T', 'U') % (
             args.prefix, str(record.seq), args.suffix
         )
-        cluster_size = 1
-        try:
-            cluster_size = cluster_size_re.search(record.description)
-            cluster_size = cluster_size.group(1)
-        except AttributeError:
-            print 'Not able to find cluster size. Setting to 1.'
-        if cluster_size is None:
-            cluster_size = 1
 
         # find structure
-        curr_seq = RNASequence(record.id, cluster_size, sequence)
+        curr_seq = RNASequence(record.id,  sequence)
         if args.run_mfold:
             curr_seq.structure, curr_seq.free_energy = run_mfold(sequence)
             curr_seq.ensemble_free_energy = 1
@@ -494,7 +486,7 @@ def process_fasta(in_fh, args, cluster_size_re, rna_seq_objs):
         rna_seq_objs.append(curr_seq)
 
 
-def process_struct_fasta(in_fh, args, cluster_size_re, rna_seq_objs):
+def process_struct_fasta(in_fh, args,  rna_seq_objs):
     """Process non-fasta input file. Populate RNASequence
     (graph vertex) objects.
     """
@@ -513,16 +505,8 @@ def process_struct_fasta(in_fh, args, cluster_size_re, rna_seq_objs):
         sequence = '%s%s%s'.replace('T', 'U') % (
             args.prefix, sequence, args.suffix
         )
-        try:
-            cluster_size = cluster_size_re.search(header)
-            cluster_size = cluster_size.group(1)
-        except AttributeError:
-            print 'Not able to find cluster size. Setting to 1.'
-        if cluster_size is None:
-            cluster_size = 1
         header = header.replace('>', '')
-        header = header.split('SIZE=')[0]
-        curr_seq = RNASequence(header, cluster_size, sequence)
+        curr_seq = RNASequence(header,  sequence)
         curr_seq.free_energy = 1
         curr_seq.ensemble_free_energy = 1
         curr_seq.ensemble_probability = 1

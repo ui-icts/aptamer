@@ -24,13 +24,12 @@ from aptamer_functions import *
 
 def main():
     args = parse_arguments()
-    cluster_size_re = re.compile('SIZE=(\d+)')
     in_fname = args.input_file
     in_fh = open(in_fname)
     stats = {'energy_delta':[], 'edit_distance':[], 'tree_distance':[]}
     rna_seq_objs = []  # list of RNASequence objects
 
-    process_fasta(in_fh, args, cluster_size_re, rna_seq_objs)
+    process_fasta(in_fh, args,  rna_seq_objs)
     # output fasta with structure line
     if args.output:
         out_fasta_fname = args.output
@@ -39,12 +38,12 @@ def main():
     with open(out_fasta_fname, 'w') as out_fasta_f:
         for node in rna_seq_objs:
             out_fasta_f.write(
-                '>%s  SIZE=%d\n%s\n%s\n' % (
-                    node.name, node.cluster_size, node.sequence,
+                '>%s \n%s\n%s\n' % (
+                    node.name,  node.sequence,
                     node.structure
                 )
             )
-    process_struct_fasta(in_fh, args, cluster_size_re, rna_seq_objs)
+    process_struct_fasta(in_fh, args,  rna_seq_objs)
     xgmml_obj = XGMML(in_fname)
 
     # nodes are now populated. find edges.
