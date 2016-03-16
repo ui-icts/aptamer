@@ -282,17 +282,17 @@ def parse_arguments():
         )
     )
     parser.add_argument(
-        '-p', '--prefix', default='GGGAGGACGAUGCGG', help=(
+        '-p', '--prefix', default='', help=(
             'Sequence to prepend to RNA sequences during '
             'structure prediction. '
-            '(Default: GGGAGGACGAUGCG)'
+            '(Default: --NO PRIMER-- previously used GGGAGGACGAUGCG)'
         )
     )
     parser.add_argument(
-        '-s', '--suffix', default='CAGACGACUCGCCCGA', help= (
+        '-s', '--suffix', default='', help= (
             'Sequence to append to RNA sequences during '
             'structure prediction. '
-            '(Default: CAGACGACUCGCCCGA)'
+            '(Default: --NO PRIMER-- previously used CAGACGACUCGCCCGA)'
         )
     )
     parser.add_argument(
