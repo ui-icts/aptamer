@@ -413,7 +413,7 @@ def process_seq_pairs(seq_pairs, args, stats):
         seq_to_tree.append(x.sequence2.structure)
     tree_distance = rna_distance('\n'.join(seq_to_tree))
     tree_distance = tree_distance.strip('\n').split('\n')  # take off last lr
-    assert len(tree_distance) == len(seq_pairs)
+    assert len(tree_distance) == len(seq_pairs), " %s tree distance size does not match %s seq_pairs size and should -- is this a fasta file that needs a -c flag? "%(len(tree_distance),len(seq_pairs))
     for i, x in enumerate(seq_pairs):
         seq_pairs[i].tree_distance = tree_distance[i].split(' ')[1]
         x.output(args)
@@ -446,15 +446,13 @@ def process_fasta(in_fh, args,  rna_seq_objs):
     objects.
     """
     for record in SeqIO.parse(in_fh, 'fasta'):
-        # sequence = '%s%s%s'.replace('T', 'U') % (
-        #     args.prefix, re.sub('[^GATCU]', '', str(record.seq)), args.suffix
-        # )
         sequence = '%s%s%s'.replace('T', 'U') % (
             args.prefix, str(record.seq), args.suffix
         )
 
         # find structure
-        curr_seq = RNASequence(record.id,  sequence)
+        new_id = record.id.split('\t')[0]
+        curr_seq = RNASequence(new_id,  sequence)
         if args.run_mfold:
             curr_seq.structure, curr_seq.free_energy = run_mfold(sequence)
             curr_seq.ensemble_free_energy = 1
@@ -505,6 +503,7 @@ def process_struct_fasta(in_fh, args,  rna_seq_objs):
         sequence = '%s%s%s'.replace('T', 'U') % (
             args.prefix, sequence, args.suffix
         )
+        header = header.split('\t')[0] #get the begining id and remove extra stuff
         header = header.replace('>', '')
         curr_seq = RNASequence(header,  sequence)
         curr_seq.free_energy = 1
