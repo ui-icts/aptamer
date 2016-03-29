@@ -9,21 +9,7 @@ sequences. Edges are created between vertices that have a small enough
 tree distance or edit distance between them. (Specified in args.)
 """
 
-
-import os
-import sys
-import re
-import subprocess
-import itertools
-import textwrap
-import argparse
-import numpy
-import scipy.stats
-from Bio import SeqIO
-import Levenshtein
-
 from aptamer_functions import *
-
 
 def main():
     args = parse_arguments()
