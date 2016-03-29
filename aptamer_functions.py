@@ -272,7 +272,8 @@ def get_mfold_stats(det_filename):
                     'mfold file *.txt.det does not match the expected format'
                 )
                 for x in valid_pattern:
-                    energy_stats[row[x]] = row[x + 2] 
+                    if row[x] != '=':
+                        energy_stats[row[x]] = row[x + 2] 
     return energy_stats
 
 
