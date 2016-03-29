@@ -8,19 +8,7 @@ Outputs a fasta with bracket-dot structures.
 Overall statistics are printed to standard output.
 """
 
-import os
-import sys
-import re
-import subprocess
-import itertools
-import textwrap
-import argparse
-import numpy
-import scipy.stats
-import Levenshtein
-
 from aptamer_functions import *
-
 
 def main():
     args = parse_arguments()
@@ -145,28 +133,34 @@ def output_stats_tsv(rna_seq_objs, args):
         out_fname = args.stats_file
     else:
         out_fname = args.input_file + '.stats.tsv'
-    categs = rna_seq_objs[0].__dict__.keys()
 
+    # get header
+    categs = rna_seq_objs[0].__dict__.keys()
+    expand_mfold = False
+    if args.run_mfold and ('energy_dict' in categs):
+        expand_mfold = True
+        energy_dict_keys = rna_seq_objs[0].energy_dict.keys()
+        categs.remove('energy_dict')
+        categs += ['mfold_%s' % z for z in energy_dict_keys]
     # make "name" the first column
     if (categs[0] != 'name') and ('name' in categs):
         name_index = categs.index('name')
         categs[0], categs[name_index] = categs[name_index], categs[0]
-
     out_list = []
     for x in rna_seq_objs:
         curr_list = []
         d = x.__dict__
         for y in categs:
-            if y in d and d[y]:
+            if expand_mfold and y.replace('mfold_', '') in energy_dict_keys:
+                curr_list.append(
+                    str(d['energy_dict'][y.replace('mfold_', '')])
+                )
+            elif y in d and d[y]:
                 curr_list.append(str(d[y]))
             else:
                 curr_list.append('NA')
         out_list.append(curr_list)
 
-    #if os.path.exists(out_fname):
-    #    print (
-    #        'Warning: Overwriting existing stats file "%s".' % out_fname
-    #    )
     with open(out_fname, 'w') as out_f:
         out_f.write('%s\n' % '\t'.join(categs))
         for x in out_list:
