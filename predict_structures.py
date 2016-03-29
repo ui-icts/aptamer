@@ -24,12 +24,13 @@ from aptamer_functions import *
 
 def main():
     args = parse_arguments()
+    cluster_size_re = re.compile('SIZE=(\d+)')
     in_fname = args.input_file
     in_fh = open(in_fname)
     stats = {'energy_delta':[], 'edit_distance':[], 'tree_distance':[]}
     rna_seq_objs = []  # list of RNASequence objects
 
-    process_fasta(in_fh, args,  rna_seq_objs)
+    process_fasta(in_fh, args, cluster_size_re, rna_seq_objs)
     # output fasta with structure line
     if args.output:
         out_fasta_fname = args.output
@@ -38,21 +39,22 @@ def main():
     with open(out_fasta_fname, 'w') as out_fasta_f:
         for node in rna_seq_objs:
             out_fasta_f.write(
-                '>%s \n%s\n%s\n' % (
-                    node.name,  node.sequence,
-                    node.structure
-                )
+                '>%s\n%s\n%s\n' % (node.name, node.sequence, node.structure)
             )
-    process_struct_fasta(in_fh, args,  rna_seq_objs)
+    process_struct_fasta(in_fh, args, cluster_size_re, rna_seq_objs)
     xgmml_obj = XGMML(in_fname)
 
     # nodes are now populated. find edges.
     print 'Calculating stats...'
     find_edges_no_seed(rna_seq_objs, xgmml_obj, args, stats)
     print_stats(stats, args)
-    print '\n\nOutput written to %s.' % (
+
+    print '\n'
+    print 'Output written to %s.' % (
         out_fasta_fname if (args.calc_structures) else out_xgmml_fname
     )
+    output_stats_tsv(rna_seq_objs, args)
+    print
     in_fh.close()
 
 
@@ -107,6 +109,13 @@ def parse_arguments():
             '(Default: --NO PRIMER-- previously used CAGACGACUCGCCCGA)'
         )
     )
+    parser.add_argument(
+        '-t', '--stats_file', help=(
+            'Tab-separated file to write aptamer structure '
+            'statistics to. '
+            '(Default: <input_filename>.stats.tsv)'
+        )
+    )
 
     if len(sys.argv) <= 1:
         parser.print_help()
@@ -129,6 +138,40 @@ def parse_arguments():
     args.max_tree_dist = 3
 
     return args
+
+
+def output_stats_tsv(rna_seq_objs, args):
+    if args.stats_file:
+        out_fname = args.stats_file
+    else:
+        out_fname = args.input_file + '.stats.tsv'
+    categs = rna_seq_objs[0].__dict__.keys()
+
+    # make "name" the first column
+    if (categs[0] != 'name') and ('name' in categs):
+        name_index = categs.index('name')
+        categs[0], categs[name_index] = categs[name_index], categs[0]
+
+    out_list = []
+    for x in rna_seq_objs:
+        curr_list = []
+        d = x.__dict__
+        for y in categs:
+            if y in d and d[y]:
+                curr_list.append(str(d[y]))
+            else:
+                curr_list.append('NA')
+        out_list.append(curr_list)
+
+    #if os.path.exists(out_fname):
+    #    print (
+    #        'Warning: Overwriting existing stats file "%s".' % out_fname
+    #    )
+    with open(out_fname, 'w') as out_f:
+        out_f.write('%s\n' % '\t'.join(categs))
+        for x in out_list:
+            out_f.write('%s\n' % '\t'.join(x))
+    print 'Statistics written to %s.' % out_fname
 
 
 if __name__ == '__main__':
