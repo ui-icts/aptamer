@@ -173,24 +173,27 @@ class XGMML:
         return self.out_str
 
 
-def run_rnafold(seq, vienna_version):
+def run_rnafold(seq, args):
     print '##################'
     print 'Running RNAFold...'
     print '##################'
     cmd = None
-    if vienna_version == 1:
+    if args.pass_options is not None:
+        cmd = ['RNAfold %s' % args.pass_options]
+    elif args.vienna_version == 1:
         cmd = ['RNAfold -p -T 30 -noLP -noPS -noGU']
-    elif vienna_version == 2:
+    elif args.vienna_version == 2:
         cmd = ['RNAfold -p -T 30 --noLP --noPS --noGU']
     sffproc = subprocess.Popen(
         cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
         stdin=subprocess.PIPE, close_fds=True, shell=True
     )
+    print 'Command:', cmd[0]
     stdout_value, stderr_value = sffproc.communicate(seq)
     return stdout_value
 
 
-def run_mfold(seq):
+def run_mfold(seq, args):
     print '##################'
     print 'Running mfold...'
     print '##################'
@@ -200,9 +203,12 @@ def run_mfold(seq):
     temp_filename = 'mfold_temp.txt'
     with open(temp_filename, 'w') as f:
         f.write('%s\n' % seq)
+    if args.pass_options is not None:
+        cmd_string = 'mfold SEQ=%s %s' % (temp_filename, args.pass_options)
+    else:
+        cmd_string = 'mfold SEQ=%s T=30' % temp_filename
     ret = subprocess.call(
-        ('mfold SEQ=%s T=30' % temp_filename),
-        stderr=subprocess.STDOUT, shell=True
+        cmd_string, stderr=subprocess.STDOUT, shell=True
     )
     if ret != 0:
         print (
@@ -314,31 +320,46 @@ def process_fasta(in_fh, args, cluster_size_re, rna_seq_objs):
         # find structure
         curr_seq = RNASequence(record.id, cluster_size, sequence)
         if args.run_mfold:
-            curr_seq.structure, curr_seq.energy_dict = run_mfold(sequence)
+            curr_seq.structure, curr_seq.energy_dict = run_mfold(
+                sequence, args
+            )
             curr_seq.free_energy = curr_seq.energy_dict['dG']
         else:
-            rnafold_out = run_rnafold(sequence, args.vienna_version)
+            rnafold_out = run_rnafold(sequence, args)
             rnafold_out = rnafold_out.split('\n')
+            try:
+                curr_seq.structure, curr_seq.free_energy = (
+                    rnafold_out[1].split(' (')
+                )
+            except (ValueError, IndexError):
+                print 'Error running RNAfold:\n%s\nExiting.' % rnafold_out
+                sys.exit(1)
+
             print '%s\n' % rnafold_out
-            curr_seq.structure, curr_seq.free_energy = (
-                rnafold_out[1].split(' (')
-            )
-            curr_seq.free_energy = abs(
-                float(curr_seq.free_energy.replace(')', ''))
-            )
-            curr_seq.ensemble_free_energy = abs(
-                float(rnafold_out[2].split('[')[1].replace(']', ''))
-            )
-            curr_seq.ensemble_probability = abs(float(
-                rnafold_out[4].split(';')[0].replace(
-                    ' frequency of mfe structure in ensemble ', ''
+            try:
+                curr_seq.free_energy = abs(
+                    float(curr_seq.free_energy.replace(')', ''))
                 )
-            ))
-            curr_seq.ensemble_diversity = abs(float(
-                rnafold_out[4].split(';')[1].replace(
-                    ' ensemble diversity ', ''
+                curr_seq.ensemble_free_energy = abs(
+                    float(rnafold_out[2].split('[')[1].replace(']', ''))
                 )
-            ))
+                curr_seq.ensemble_probability = abs(float(
+                    rnafold_out[4].split(';')[0].replace(
+                        ' frequency of mfe structure in ensemble ', ''
+                    )
+                ))
+                curr_seq.ensemble_diversity = abs(float(
+                    rnafold_out[4].split(';')[1].replace(
+                        ' ensemble diversity ', ''
+                    )
+                ))
+            except IndexError:
+                print (
+                    'Error parsing RNAfold output. '
+                    '(Couldn\'t find statistics.) Please check '
+                    'RNAfold options.'
+                )
+                sys.exit(1)
         rna_seq_objs.append(curr_seq)
 
 
