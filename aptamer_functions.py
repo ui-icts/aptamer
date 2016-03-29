@@ -27,9 +27,9 @@ import Levenshtein
 
 class RNASequence:
     """Graph node."""
-    def __init__(self, name, seq):
+    def __init__(self, name, cluster_size, seq):
         self.name = name  # integer ID
-        self.cluster_size = None
+        self.cluster_size = int(cluster_size)
         self.sequence = seq
         self.structure = None
         self.free_energy = None
@@ -130,8 +130,8 @@ class XGMML:
             """ % self.name
         ).lstrip()
         for n in self.nodes:
-            self.out_str += '<node id="%s" label="%s">\n' % (
-                n, self.nodes[n].name
+            self.out_str += '<node id="%s" label="%s" weight="%s">\n' % (
+                n, self.nodes[n].name, self.nodes[n].cluster_size
             )
             if not self.nodes[n] == None:
                 self.output_att(
@@ -212,7 +212,7 @@ def run_mfold(seq):
         sys.exit(ret)
     print
     structure = convert_ct_to_bracket_dot('%s.ct' % temp_filename)
-    energy_stats = get_mfold_stats('%s.det' %temp_filename)
+    energy_stats = get_mfold_stats('%s.det' % temp_filename)
     os.chdir('..')
     return structure, energy_stats
 
@@ -236,7 +236,11 @@ def process_seq_pairs(seq_pairs, args, stats):
         seq_to_tree.append(x.sequence2.structure)
     tree_distance = rna_distance('\n'.join(seq_to_tree))
     tree_distance = tree_distance.strip('\n').split('\n')  # take off last lr
-    assert len(tree_distance) == len(seq_pairs), "Error length of tree distance %s does not match length of seq_pairs %s and should --check installation of RNAdistance" %(len(tree_distance), len(seq_pairs))
+    assert len(tree_distance) == len(seq_pairs), (
+        'Error length of tree distance %s does not match length of seq_pairs '
+        '%s and should -- check installation of RNAdistance'
+        % (len(tree_distance), len(seq_pairs))
+    )
     for i, x in enumerate(seq_pairs):
         seq_pairs[i].tree_distance = tree_distance[i].split(' ')[1]
         x.output(args)
@@ -247,29 +251,39 @@ def process_seq_pairs(seq_pairs, args, stats):
         except ValueError:
             stats['tree_distance'].append(None)
 
+
 def get_mfold_stats(det_filename):
-    valid_pattern = {0:'dG',1:"=",3:"dH",4:"=",6:"dS",7:"=",9:"Tm",10:"="} #fixed values within line
+    #fixed values within line
+    valid_pattern = {
+        0:'dG', 1:'=', 3:'dH', 4:'=', 6:'dS', 7:'=', 9:'Tm', 10:'='
+    }
     energy_stats = {}
-    for key,value in valid_pattern.iteritems():
-        if value !=  '=':
+    for key, value in valid_pattern.iteritems():
+        if value != '=':
             energy_stats[value] = None
     with open(det_filename) as f:
-        for i,row in enumerate(f):
+        for i, row in enumerate(f):
             if i == 5: #6th line
                 row = row.split()
-                test_pattern = [row[x] ==  valid_pattern[x] for x in valid_pattern]
-                assert False not in test_pattern, "mfold file *.txt.det does not match the expected format"
+                test_pattern = [
+                    row[z] ==  valid_pattern[z] for z in valid_pattern
+                ]
+                assert False not in test_pattern, (
+                    'mfold file *.txt.det does not match the expected format'
+                )
                 for x in valid_pattern:
-                    energy_stats[row[x]] = row[x+2] 
+                    energy_stats[row[x]] = row[x + 2] 
     return energy_stats
+
 
 def convert_ct_to_bracket_dot(ct_filename):
     bracket_dot = ''
     with open(ct_filename) as f:
         for row in f:
             row = row.split()
+            # used to grab energy but not needed except to skip first line
             if '=' in row and len(row) < 6:  # first row
-                pass #used to grab energy but not needed except to skip first line
+                pass
             elif row[4] == '0':
                 bracket_dot += '.'
             elif int(row[0]) < int(row[4]):
@@ -279,20 +293,25 @@ def convert_ct_to_bracket_dot(ct_filename):
     return '%s' % (bracket_dot) if (bracket_dot != '') else None
 
 
-def process_fasta(in_fh, args, rna_seq_objs):
+def process_fasta(in_fh, args, cluster_size_re, rna_seq_objs):
     """Process input file as fasta. Populate RNASequence (graph vertex)
     objects.
     """
     for record in SeqIO.parse(in_fh, 'fasta'):
-        # sequence = '%s%s%s'.replace('T', 'U') % (
-        #     args.prefix, re.sub('[^GATCU]', '', str(record.seq)), args.suffix
-        # )
         sequence = '%s%s%s'.replace('T', 'U') % (
             args.prefix, str(record.seq), args.suffix
         )
+        cluster_size = 1
+        try:
+            cluster_size = cluster_size_re.search(record.description)
+            cluster_size = cluster_size.group(1)
+        except AttributeError:
+            print 'Not able to find cluster size. Setting to 1.'
+        if cluster_size is None:
+            cluster_size = 1
 
         # find structure
-        curr_seq = RNASequence(record.id,  sequence)
+        curr_seq = RNASequence(record.id, cluster_size, sequence)
         if args.run_mfold:
             curr_seq.structure, curr_seq.energy_dict = run_mfold(sequence)
             curr_seq.free_energy = curr_seq.energy_dict['dG']
@@ -322,7 +341,7 @@ def process_fasta(in_fh, args, rna_seq_objs):
         rna_seq_objs.append(curr_seq)
 
 
-def process_struct_fasta(in_fh, args, rna_seq_objs):
+def process_struct_fasta(in_fh, args, cluster_size_re, rna_seq_objs):
     """Process non-fasta input file. Populate RNASequence
     (graph vertex) objects.
     """
@@ -344,8 +363,15 @@ def process_struct_fasta(in_fh, args, rna_seq_objs):
             )
         else:
             sequence = sequence.replace('T', 'U')
+        try:
+            cluster_size = cluster_size_re.search(header)
+            cluster_size = cluster_size.group(1)
+        except AttributeError:
+            print 'Not able to find cluster size. Setting to 1.'
+        if cluster_size is None:
+            cluster_size = 1
         header = header.replace('>', '')
-        curr_seq = RNASequence(header, sequence)
+        curr_seq = RNASequence(header, cluster_size, sequence)
         curr_seq.free_energy = 1
         curr_seq.ensemble_free_energy = 1
         curr_seq.ensemble_probability = 1
