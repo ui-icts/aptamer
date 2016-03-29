@@ -69,6 +69,13 @@ def parse_arguments():
         )
     )
     parser.add_argument(
+        '-t', '--stats_file', help=(
+            'Tab-separated file to write aptamer structure '
+            'statistics to. '
+            '(Default: <input_filename>.stats.tsv)'
+        )
+    )
+    parser.add_argument(
         '-m', '--run_mfold', action='store_true', default=False,
         help=(
             'Run mfold instead of to Vienna RNAFold to predict '
@@ -84,24 +91,26 @@ def parse_arguments():
         )
     )
     parser.add_argument(
-        '-p', '--prefix', default='', help=(
+        '--prefix', default='', help=(
             'Sequence to prepend to RNA sequences during '
             'structure prediction. '
             '(Default: --NO PRIMER-- previously used GGGAGGACGAUGCG)'
         )
     )
     parser.add_argument(
-        '-s', '--suffix', default='', help= (
+        '--suffix', default='', help= (
             'Sequence to append to RNA sequences during '
             'structure prediction. '
             '(Default: --NO PRIMER-- previously used CAGACGACUCGCCCGA)'
         )
     )
     parser.add_argument(
-        '-t', '--stats_file', help=(
-            'Tab-separated file to write aptamer structure '
-            'statistics to. '
-            '(Default: <input_filename>.stats.tsv)'
+        '--pass_options', help=(
+            'Quoted string containing options to pass to Vienna or '
+            'mfold (depending on whether -m is selected) in lieu '
+            'of the following default options. '
+            'Vienna default options: "-p -T 30 --noLP --noPS --noGU". '
+            'mfold default options: "T=30"'
         )
     )
 
@@ -109,6 +118,18 @@ def parse_arguments():
         parser.print_help()
         print '\nError: Input file not specified.'
         sys.exit(1)
+
+    # workaround for argparse bug
+    # (thinks quoted strings starting with dash are arguments)
+    if '--pass_options' in sys.argv:
+        pass_options_index = sys.argv.index('--pass_options')
+        if pass_options_index < len(sys.argv) - 1:
+            next_arg = sys.argv[pass_options_index + 1]
+            if (
+                (next_arg.startswith('-')) and
+                (next_arg not in parser._option_string_actions.keys())
+            ):
+                sys.argv[pass_options_index + 1] = ' %s' % next_arg
 
     args = parser.parse_args()
 
