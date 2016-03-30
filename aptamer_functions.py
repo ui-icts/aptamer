@@ -77,26 +77,34 @@ class RNASequencePair:
 
         # make edge between nodes that are similar enough
         # in terms of edit or tree distance
+        interaction = []
         if args.edge_type in ['edit', 'both']:
             if (
                 self.edit_distance and
                 (int(self.edit_distance) <= args.max_edit_dist)
             ):
-                self.xgmml.edges.append((
-                    self.sequence1.name, self.sequence2.name,
-                    'edit_distance', self.edit_distance
-                ))
+                interaction.append('edit distance')
                 self.is_valid_edge = True
         if args.edge_type in ['tree', 'both']:
             if (
                 self.tree_distance and
                 (int(self.tree_distance) <= args.max_tree_dist)
             ):
-                self.xgmml.edges.append((
-                    self.sequence1.name, self.sequence2.name,
-                    'tree_distance', self.tree_distance
-                ))
+                interaction.append('tree distance')
                 self.is_valid_edge = True
+
+        if not self.is_valid_edge:
+            return
+        if len(interaction) > 1:
+            interaction = 'both'
+        else:
+            interaction = interaction[0]
+        self.xgmml.edges.append([
+            self.sequence1.name, self.sequence2.name,
+            ('string', 'interaction', 'interaction', interaction),
+            ('integer', 'editDistance', 'edit distance', self.edit_distance),
+            ('integer', 'treeDistance', 'tree distance', self.tree_distance)
+        ])
 
 
 class XGMML:
@@ -106,8 +114,8 @@ class XGMML:
         self.out_str = ''
         self.nodes = {}
 
-        # list of tuples
-        # (source ID, target ID, attribute name, attribute value)
+        # [source ID, target ID, (attribute1 name, attribute1 value),
+        # (attribute2 name, attribute2 value), ...]
         self.edges = []
 
     def output_att(self, type_, name, label, value):
@@ -161,13 +169,15 @@ class XGMML:
             self.out_str += '</node>\n'
 
         for e in self.edges:
-            source, target, att_name, att_value = e
+            source, target = e[:2]
+            atts = e[2:]
             self.out_str += (
-                '<edge source="%s" target="%s" label="%s to %s" >\n' % (
+                '<edge source="%s" target="%s" label="%s to %s">\n' % (
                     source, target, source, target
                 )
             )
-            self.output_att('string', att_name, 'interaction', att_value)
+            for att_type, att_name, att_label, att_value in atts:
+                self.output_att(att_type, att_name, att_label, att_value)
             self.out_str += '</edge>\n'
         self.out_str += '</graph>\n'
         return self.out_str
@@ -392,7 +402,7 @@ def process_struct_fasta(in_fh, args, cluster_size_re, rna_seq_objs):
             print 'Not able to find cluster size. Setting to 1.'
         if cluster_size is None:
             cluster_size = 1
-        header = header.replace('>', '')
+        header = header.replace('>', '').strip()
         curr_seq = RNASequence(header, cluster_size, sequence)
         curr_seq.free_energy = 1
         curr_seq.ensemble_free_energy = 1
