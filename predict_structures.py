@@ -11,6 +11,7 @@ Overall statistics are printed to standard output.
 from aptamer_functions import *
 import time
 
+
 def main():
     start_time = time.strftime('%Y-%m-%d %I:%M:%S%p').lower()
     args = parse_arguments()
@@ -82,7 +83,7 @@ def parse_arguments():
         '-l', '--log', help=(
             'Log file to which to output command, date, '
             'structure prediction program version, and citation. '
-            '(Default: <input_filename>.log'
+            '(Default: <input_filename>.log)'
         )
     )
     parser.add_argument(
