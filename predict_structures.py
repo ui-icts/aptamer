@@ -9,8 +9,10 @@ Overall statistics are printed to standard output.
 """
 
 from aptamer_functions import *
+import time
 
 def main():
+    start_time = time.strftime('%Y-%m-%d %I:%M:%S%p').lower()
     args = parse_arguments()
     cluster_size_re = re.compile('SIZE=(\d+)')
     in_fname = args.input_file
@@ -38,10 +40,11 @@ def main():
     print_stats(stats, args)
 
     print '\n'
-    print 'Output written to %s.' % (
+    print 'Structure fasta written to %s' % (
         out_fasta_fname if (args.calc_structures) else out_xgmml_fname
     )
     output_stats_tsv(rna_seq_objs, args)
+    output_log(args, start_time)
     print
     in_fh.close()
 
@@ -69,16 +72,23 @@ def parse_arguments():
         )
     )
     parser.add_argument(
-        '-t', '--stats_file', help=(
+        '-t', '--stats', help=(
             'Tab-separated file to write aptamer structure '
             'statistics to. '
             '(Default: <input_filename>.stats.tsv)'
         )
     )
     parser.add_argument(
+        '-l', '--log', help=(
+            'Log file to which to output command, date, '
+            'structure prediction program version, and citation. '
+            '(Default: <input_filename>.log'
+        )
+    )
+    parser.add_argument(
         '-m', '--run_mfold', action='store_true', default=False,
         help=(
-            'Run mfold instead of to Vienna RNAFold to predict '
+            'Run mfold instead of Vienna RNAFold to predict '
             'RNA structures. Note: some graph attributes will '
             'be omitted.'
         )
@@ -150,8 +160,8 @@ def parse_arguments():
 
 
 def output_stats_tsv(rna_seq_objs, args):
-    if args.stats_file:
-        out_fname = args.stats_file
+    if args.stats:
+        out_fname = args.stats
     else:
         out_fname = args.input_file + '.stats.tsv'
 
@@ -186,7 +196,63 @@ def output_stats_tsv(rna_seq_objs, args):
         out_f.write('%s\n' % '\t'.join(categs))
         for x in out_list:
             out_f.write('%s\n' % '\t'.join(x))
-    print 'Statistics written to %s.' % out_fname
+    print 'Statistics written to %s' % out_fname
+
+
+def output_log(args, start_time):
+    if args.log:
+        out_fname = args.log
+    else:
+        out_fname = args.input_file + '.log'
+    # get citation
+    vienna1_citation = (
+        'I.L. Hofacker, W. Fontana, P.F. Stadler, L.S. Bonhoeffer, '
+        'M. Tacker, and P. Schuster (1994), "Fast folding and comparison '
+        'of RNA secondary structures", Monatshefte fur Chemie 125'
+    )
+    vienna2_citation = (
+        'R. Lorenz, S.H. Bernhart, C. Hoener zu Siederdissen, H. Tafer, C. '
+        'Flamm, P.F. Stadler, and I.L. Hofacker (2011), "ViennaRNA Package '
+        '2.0", Algorithms for Molecular Biology 6:26'
+    )
+    mfold_citation = (
+        'M. Zuker (1989), "On finding all suboptimal foldings of an RNA '
+        'molecule", Science 244:4900'
+    )
+    if args.run_mfold:
+        citation = mfold_citation
+    elif str(args.vienna_version) == 1:
+        citation = vienna1_citation
+    else:
+        citation = vienna2_citation
+
+    with open(out_fname, 'w') as out_f:
+        out_f.write('Command: %s\n' % ' '.join(sys.argv))
+        out_f.write('Start time: %s\n' % start_time)
+        if args.run_mfold:
+            write_version_str(out_f, 'mfold', 'mfold -v')
+        else:
+            write_version_str(out_f, 'Vienna RNAFold', 'RNAFold --version')
+        out_f.write('Citation: %s\n' % citation)
+    print 'Log written to %s' % out_fname
+
+
+def write_version_str(out_f, program_name, version_command):
+    p = subprocess.Popen(
+        version_command.split(), stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE
+    )
+    stdout, stderr = p.communicate()
+    if stderr:
+        out_f.write(
+            'Program: Error getting %s version: %s\n' %
+            (program_name, stderr)
+        )
+    else:
+        out_f.write(
+            'Program: %s version %s\n' %
+            (program_name, re.sub('[^.0-9]', '', stdout))
+        )
 
 
 if __name__ == '__main__':
