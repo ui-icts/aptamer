@@ -10,8 +10,11 @@ tree distance or edit distance between them. (Specified in args.)
 """
 
 from aptamer_functions import *
+import time
+
 
 def main():
+    start_time = time.strftime('%Y-%m-%d %I:%M:%S%p').lower()
     args = parse_arguments()
     cluster_size_re = re.compile('SIZE=(\d+)')
     in_fname = args.input_file
@@ -38,10 +41,11 @@ def main():
         out_xgmml_f.write(xgmml_obj.output(args))
 
     print_stats(stats, args)
-    print '\n\nOutput written to %s.' % (
+    print '\n\nOutput written to %s' % (
         out_fasta_fname if (args.calc_structures) else out_xgmml_fname
     )
-
+    output_log(args, start_time)
+    print
     in_fh.close()
 
 
@@ -62,6 +66,12 @@ def parse_arguments():
         '-o', '--output', help=(
             'Specify path of output xgmml graph file. '
             '(Default: <input_filename>.xgmml)'
+        )
+    )
+    parser.add_argument(
+        '-l', '--log', help=(
+            'Log file to which to output command and date. '
+            '(Default: <input_filename>.log)'
         )
     )
     parser.add_argument(
@@ -111,6 +121,19 @@ def parse_arguments():
     args.calc_structures = False
 
     return args
+
+
+def output_log(args, start_time):
+    if args.log:
+        out_fname = args.log
+    else:
+        out_fname = args.input_file + '.log'
+
+    with open(out_fname, 'w') as out_f:
+        out_f.write('Command: %s\n' % ' '.join(sys.argv))
+        out_f.write('Start time: %s\n' % start_time)
+    print 'Log written to %s' % out_fname
+
 
 if __name__ == '__main__':
     sys.exit(main())
