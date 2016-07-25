@@ -165,10 +165,10 @@ def output_families(nodes, families, out_f):
         for i, family in enumerate(families[edit_dist]):
             for node in family:
                 d[(node, edit_dist)] = i
-    try:
-        nodes = [int(z) for z in nodes]
-    except ValueError:
-        pass
+    #try:
+    #    nodes = [int(z) for z in nodes]
+    #except ValueError:
+    #    pass
     for node in sorted(nodes):
         node = str(node)
         out_f.write('Node=%s\t' % node)
