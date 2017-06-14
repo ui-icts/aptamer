@@ -36,7 +36,10 @@ pkg_shasum="TODO"
 pkg_deps=(
   core/groff
   core/python2
-  core/gcc
+  core/glibc
+  core/gcc-libs
+  core/zlib
+  chrisortman/ViennaRNA
 )
 pkg_build_deps=(
   core/cacerts
@@ -80,7 +83,7 @@ do_build() {
 
 do_check() {
 
-  bin/python -c "import numpy; import scipy.stats; from Bio import SeqIO; import Levenshtein;"
+  bin/python -c "import numpy; import scipy.stats; from Bio import SeqIO; import Levenshtein; import scipy.special"
 }
 
 do_install() {
@@ -89,13 +92,40 @@ do_install() {
   pip install scipy
   pip install biopython
   pip install python-Levenshtein
-
+  
+  virtualenv --relocatable $pkg_prefix
+  
   mkdir -p ${pkg_prefix}/scripts
   cp -a aptamer_functions.py ${pkg_prefix}/scripts
   cp -a create_graph.py ${pkg_prefix}/scripts
   cp -a find_families.py ${pkg_prefix}/scripts
   cp -a predict_structures.py ${pkg_prefix}/scripts
 
+  cat << DO_SCRIPT > ${pkg_prefix}/bin/python-wrapper
+#!/bin/sh
+
+# This script is used to invoke python
+# but ensure that gcc libraries are able to be
+# found (that's why we set LD_LIBRARY_PATH)
+
+# It also ensures that python output is not buffered.
+
+export LD_LIBRARY_PATH=$(pkg_path_for core/gcc-libs)/lib
+python -u "\$@"
+DO_SCRIPT
+
+  chmod +x ${pkg_prefix}/bin/python-wrapper
+
+  cat << DO_SCRIPT > ${pkg_prefix}/bin/run-aptamer
+#!/bin/sh
+
+# This script ensures that we are invoked within
+# our environment
+
+hab pkg exec ${pkg_origin}/${pkg_name} python-wrapper "\$@"
+DO_SCRIPT
+
+  chmod +x ${pkg_prefix}/bin/run-aptamer
 }
 
 do_strip() {
