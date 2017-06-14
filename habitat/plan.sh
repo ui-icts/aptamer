@@ -36,6 +36,7 @@ pkg_shasum="TODO"
 pkg_deps=(
   core/groff
   core/python2
+  core/gcc
 )
 pkg_build_deps=(
   core/cacerts
@@ -88,6 +89,12 @@ do_install() {
   pip install scipy
   pip install biopython
   pip install python-Levenshtein
+
+  mkdir -p ${pkg_prefix}/scripts
+  cp -a aptamer_functions.py ${pkg_prefix}/scripts
+  cp -a create_graph.py ${pkg_prefix}/scripts
+  cp -a find_families.py ${pkg_prefix}/scripts
+  cp -a predict_structures.py ${pkg_prefix}/scripts
 
 }
 
