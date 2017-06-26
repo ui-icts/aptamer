@@ -233,7 +233,7 @@ def output_log(args, start_time):
         if args.run_mfold:
             write_version_str(out_f, 'mfold', 'mfold -v')
         else:
-            write_version_str(out_f, 'Vienna RNAFold', 'RNAFold --version')
+            write_version_str(out_f, 'Vienna RNAFold', 'RNAfold --version')
         out_f.write('Citation: %s\n' % citation)
     print 'Log written to %s' % out_fname
 
