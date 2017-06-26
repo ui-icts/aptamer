@@ -111,6 +111,7 @@ do_install() {
 # It also ensures that python output is not buffered.
 
 export LD_LIBRARY_PATH=$(pkg_path_for core/gcc-libs)/lib
+export PATH=$(pkg_path_for chrisortman/ViennaRNA)/bin:\$PATH
 python -u "\$@"
 DO_SCRIPT
 
