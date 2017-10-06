@@ -111,9 +111,9 @@ do_install() {
 
 # It also ensures that python output is not buffered.
 
-export LD_LIBRARY_PATH=$(pkg_path_for core/gcc-libs)/lib
+export LD_LIBRARY_PATH=$(pkg_path_for core/gcc-libs)/lib:$(pkg_path_for core/gcc)/lib
 export PATH=$(pkg_path_for chrisortman/ViennaRNA)/bin:$(pkg_path_for chrisortman/mfold)/bin\$PATH
-python -u "\$@"
+${pkg_prefix}/bin/python -u "\$@"
 DO_SCRIPT
 
   chmod +x ${pkg_prefix}/bin/python-wrapper
