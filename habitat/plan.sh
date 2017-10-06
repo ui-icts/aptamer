@@ -40,6 +40,7 @@ pkg_deps=(
   core/gcc-libs
   core/zlib
   chrisortman/ViennaRNA
+  chrisortman/mfold
 )
 pkg_build_deps=(
   core/cacerts
@@ -111,7 +112,7 @@ do_install() {
 # It also ensures that python output is not buffered.
 
 export LD_LIBRARY_PATH=$(pkg_path_for core/gcc-libs)/lib
-export PATH=$(pkg_path_for chrisortman/ViennaRNA)/bin:\$PATH
+export PATH=$(pkg_path_for chrisortman/ViennaRNA)/bin:$(pkg_path_for chrisortman/mfold)/bin\$PATH
 python -u "\$@"
 DO_SCRIPT
 
