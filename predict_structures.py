@@ -76,7 +76,7 @@ def parse_arguments():
         '-t', '--stats', help=(
             'Tab-separated file to write aptamer structure '
             'statistics to. '
-            '(Default: <input_filename>.stats.tsv)'
+            '(Default: <input_filename>.properties)'
         )
     )
     parser.add_argument(
@@ -164,7 +164,7 @@ def output_stats_tsv(rna_seq_objs, args):
     if args.stats:
         out_fname = args.stats
     else:
-        out_fname = args.input_file + '.stats.tsv'
+        out_fname = args.input_file + '.properties'
 
     # get header
     categs = rna_seq_objs[0].__dict__.keys()
