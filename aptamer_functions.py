@@ -420,7 +420,7 @@ def find_edges_seed(rna_seq_objs, xgmml_obj, args, stats):
         seq_pairs = []
          # go through and find all the matches
          # then remove matches and start again till gone
-        for x in range(1, len(nodes_copy) - 1):
+        for x in range(1, len(nodes_copy)):
             # new nodes_copy[0] each time a node is deleted
             pair = RNASequencePair(
                 nodes_copy[0], nodes_copy[x], xgmml_obj
