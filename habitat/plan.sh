@@ -38,6 +38,7 @@ pkg_deps=(
   core/python2/2.7.13/20170514010436
   core/glibc/2.22/20170513201042
   core/gcc-libs/5.2.0/20170513212920
+  core/gcc/5.2.0/20170513202244
   core/zlib/1.2.8/20170513201911
   chrisortman/ViennaRNA/2.3.3/20170614174350
   chrisortman/mfold/3.6/20171006195934
@@ -45,7 +46,6 @@ pkg_deps=(
 pkg_build_deps=(
   core/cacerts
   core/virtualenv
-  core/gcc
   core/git
 )
 pkg_bin_dirs=(bin)
