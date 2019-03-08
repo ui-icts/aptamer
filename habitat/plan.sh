@@ -45,7 +45,7 @@ pkg_deps=(
 )
 pkg_build_deps=(
   core/cacerts
-  core/virtualenv
+  core/virtualenv/15.0.3/20170514034824
   core/git
 )
 pkg_bin_dirs=(bin)
