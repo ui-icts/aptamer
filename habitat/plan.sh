@@ -1,56 +1,27 @@
-# This file is the heart of your application's habitat.
-# See full docs at https://www.habitat.sh/docs/reference/plan-syntax/
-
-# Required.
-# Sets the name of the package. This will be used in along with `pkg_origin`,
-# and `pkg_version` to define the fully-qualified package name, which determines
-# where the package is installed to on disk, how it is referred to in package
-# metadata, and so on.
 pkg_name=aptamer-scripts
-
-# Required unless overridden by the `HAB_ORIGIN` environment variable.
-# The origin is used to denote a particular upstream of a package.
 pkg_origin=chrisortman
-
-# Required.
-# Sets the version of the package.
-pkg_version="0.1.0"
-
-# Optional.
-# The name and email address of the package maintainer.
-# pkg_maintainer="The Habitat Maintainers <humans@habitat.sh>"
-
-# Optional.
-# An array of valid software licenses that relate to this package.
-# Please choose a license from http://spdx.org/licenses/
-# pkg_license=('Apache-2.0')
-
-# Required.
-# A URL that specifies where to download the source from. Any valid wget url
-# will work. Typically, the relative path for the URL is partially constructed
-# from the pkg_name and pkg_version values; however, this convention is not
-# required.
-pkg_source="https://github.com/ui-icts/aptamer/archive/${pkg-name}-${pkg-version}.tar.bz2"
-
-pkg_shasum="TODO"
+pkg_version="2.0.0"
 pkg_deps=(
-  core/groff/1.22.3/20170514000731
-  core/python2/2.7.13/20170514010436
-  core/glibc/2.22/20170513201042
-  core/gcc-libs/5.2.0/20170513212920
-  core/gcc/5.2.0/20170513202244
-  core/zlib/1.2.8/20170513201911
-  chrisortman/ViennaRNA/2.3.3/20170614174350
-  chrisortman/mfold/3.6/20171006195934
+  core/groff
+  core/python2
+  core/glibc
+  core/gcc-libs
+  core/gcc
+  core/zlib
+  chrisortman/ViennaRNA
+  chrisortman/mfold
 )
 pkg_build_deps=(
   core/cacerts
-  core/virtualenv/15.0.3/20170514034824
+  core/virtualenv
   core/git
+  core/tar
+  core/coreutils
 )
 pkg_bin_dirs=(bin)
 
 do_begin() {
+  SRC_PATH=$CACHE_PATH
   return 0
 }
 
@@ -62,14 +33,18 @@ do_begin() {
 # cloning from git. If you do clone a repo from git, you must override
 # do_verify() to return 0.
 do_download() {
- export GIT_SSL_CAINFO="$(pkg_path_for core/cacerts)/ssl/certs/cacert.pem"
+  return 0
+}
 
-      # This is a way of getting the git code that I found in the chef plan
- build_line "Fake download! Creating archive of latest repository commit from $PLAN_CONTEXT"
-          cd $PLAN_CONTEXT/..
-  git archive --prefix=${pkg_name}-${pkg_version}/ --output=$HAB_CACHE_SRC_PATH/${pkg_filename} HEAD
+do_verify() {
+  return 0
+}
 
-  pkg_shasum=$(trim $(sha256sum $HAB_CACHE_SRC_PATH/${pkg_filename} | cut -d " " -f 1))
+do_unpack() {
+  build_line "Cloning source files"
+  cd $PLAN_CONTEXT/../
+  { git ls-files; git ls-files --exclude-standard --others; } \
+    | _tar_pipe_app_cp_to $HAB_CACHE_SRC_PATH/${pkg_dirname}
 
 }
 
@@ -78,6 +53,7 @@ do_prepare() {
  # shellcheck source=/dev/null
  source "$pkg_prefix/bin/activate"
 }
+
 do_build() {
   return 0
 }
@@ -136,5 +112,29 @@ do_strip() {
 
 do_end() {
   return 0
+}
+
+_tar_pipe_app_cp_to() {
+  local dst_path tar
+  dst_path="$1"
+  tar="$(pkg_path_for tar)/bin/tar"
+
+  mkdir -p $dst_path
+
+  "$tar" -cp \
+      --owner=root:0 \
+      --group=root:0 \
+      --no-xattrs \
+      --exclude-backups \
+      --exclude-vcs \
+      --exclude='habitat' \
+      --exclude='node_modules' \
+      --exclude='vendor/bundle' \
+      --exclude='results' \
+      --files-from=- \
+      -f - \
+  | "$tar" -x \
+      -C "$dst_path" \
+      -f -
 }
 
