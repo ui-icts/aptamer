@@ -36,9 +36,12 @@ def main():
     xgmml_obj = XGMML(in_fname)
 
     # nodes are now populated. find edges.
-    print 'Calculating stats...'
-    find_edges_no_seed(rna_seq_objs, xgmml_obj, args, stats)
-    print_stats(stats, args)
+    if args.calculate_stats:
+        print 'Calculating stats...'
+        find_edges_no_seed(rna_seq_objs, xgmml_obj, args, stats)
+        print_stats(stats, args)
+    else:
+        print 'Stats calculation disabled'
 
     print '\n'
     print 'Structure fasta written to %s' % (
@@ -99,6 +102,13 @@ def parse_arguments():
         help=(
             'ViennaRNA package version. Specify "1" or "2". '
             '(Default: 2)'
+        )
+    )
+    parser.add_argument(
+        '--calculate_stats', action='store_true', default=False,
+        help=(
+            'If statistics should be calculated. Cannot handle sequences longer than 500'
+            '(Default: False)'
         )
     )
     parser.add_argument(
