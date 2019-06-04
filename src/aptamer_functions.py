@@ -23,7 +23,8 @@ import numpy
 import scipy.stats
 from Bio import SeqIO
 import Levenshtein
-
+import time
+import pdb
 
 class RNASequence:
     """Graph node."""
@@ -56,10 +57,9 @@ class RNASequence:
 
 class RNASequencePair:
     """Graph edge. Pair of RNASequence objects."""
-    def __init__(self, seq1, seq2, xgmml_obj):
+    def __init__(self, seq1, seq2):
         self.sequence1 = seq1
         self.sequence2 = seq2
-        self.xgmml = xgmml_obj
         self.energy_delta = None
         self.edit_distance = None
         self.tree_distance = None
@@ -68,12 +68,12 @@ class RNASequencePair:
     def __str__(self):
         return '%s\n---\n%s' % (str(self.sequence1), str(self.sequence2))
 
-    def output(self, args):
+    def output(self, xgmml, args):
         # if the xgmml data structure does not have this node, add it
-        if self.sequence1.name not in self.xgmml.nodes:  
-            self.xgmml.nodes[self.sequence1.name] = self.sequence1
-        if self.sequence2.name not in self.xgmml.nodes:
-            self.xgmml.nodes[self.sequence2.name] = self.sequence2
+        if self.sequence1.name not in xgmml.nodes:  
+            xgmml.nodes[self.sequence1.name] = self.sequence1
+        if self.sequence2.name not in xgmml.nodes:
+            xgmml.nodes[self.sequence2.name] = self.sequence2
 
         # make edge between nodes that are similar enough
         # in terms of edit or tree distance
@@ -99,7 +99,8 @@ class RNASequencePair:
             interaction = 'both'
         else:
             interaction = interaction[0]
-        self.xgmml.edges.append([
+
+        xgmml.edges.append([
             self.sequence1.name, self.sequence2.name,
             ('string', 'interaction', 'interaction', interaction),
             ('integer', 'editDistance', 'edit distance', self.edit_distance),
@@ -240,26 +241,34 @@ def rna_distance(structures):
         stdin=subprocess.PIPE, close_fds=True, shell=True
     )
     stdout_value, stderr_value = sffproc.communicate(structures)
-    return stdout_value
+    return stdout_value #f: num1 \n f: num2 \n
 
 
-def process_seq_pairs(seq_pairs, args, stats):
+def process_seq_pairs(seq_pairs, xgmml, args, stats):
     """Runs a batch of RNASequence pairs."""
     #print '\n\n'.join([str(z) for z in seq_pairs])
     seq_to_tree = []
+    append_s = time.clock()
     for x in seq_pairs:
         seq_to_tree.append(x.sequence1.structure)
         seq_to_tree.append(x.sequence2.structure)
+    append_e = time.clock()
+
     tree_distance = rna_distance('\n'.join(seq_to_tree))
     tree_distance = tree_distance.strip('\n').split('\n')  # take off last lr
+    distance_e = time.clock()
+
     assert len(tree_distance) == len(seq_pairs), (
         'Error length of tree distance %s does not match length of seq_pairs '
         '%s and should -- check installation of RNAdistance'
         % (len(tree_distance), len(seq_pairs))
     )
+
     for i, x in enumerate(seq_pairs):
+        # TODO: I think seq_pairs[i] == x here
+        # should just use one or the other
         seq_pairs[i].tree_distance = tree_distance[i].split(' ')[1]
-        x.output(args)
+        x.output(xgmml, args)
         stats['energy_delta'].append(x.energy_delta)
         stats['edit_distance'].append(x.edit_distance)
         try:
@@ -267,6 +276,13 @@ def process_seq_pairs(seq_pairs, args, stats):
         except ValueError:
             stats['tree_distance'].append(None)
 
+    output_e = time.clock()
+    append_time = append_e - append_s
+    distance_time = distance_e - append_e
+    output_time = output_e - distance_e
+    print 'APPEND:   {}'.format(append_time)
+    print 'DISTANCE: {}'.format(distance_time)
+    print 'OUTPUT:   {}'.format(output_time)
 
 def get_mfold_stats(det_filename):
     #fixed values within line
@@ -422,9 +438,7 @@ def find_edges_seed(rna_seq_objs, xgmml_obj, args, stats):
          # then remove matches and start again till gone
         for x in range(1, len(nodes_copy)):
             # new nodes_copy[0] each time a node is deleted
-            pair = RNASequencePair(
-                nodes_copy[0], nodes_copy[x], xgmml_obj
-            )
+            pair = RNASequencePair( nodes_copy[0], nodes_copy[x])
             pair.energy_delta = abs(
                 pair.sequence1.free_energy - pair.sequence2.free_energy
             )
@@ -432,7 +446,7 @@ def find_edges_seed(rna_seq_objs, xgmml_obj, args, stats):
                 pair.sequence1.sequence, pair.sequence2.sequence
             )
             seq_pairs.append(pair)
-        process_seq_pairs(seq_pairs, args, stats)
+        process_seq_pairs(seq_pairs, xgmml_obj, args, stats)
         for x in seq_pairs:
             if x.is_valid_edge:
                 x.sequence2.use_for_comparison = False
@@ -445,15 +459,18 @@ def find_edges_seed(rna_seq_objs, xgmml_obj, args, stats):
         )
         nodes_copy = new_nodes_copy
 
-
 def find_edges_no_seed(rna_seq_objs, xgmml_obj, args, stats):
     """"Find edges using non-seed algorithm."""
     seq_pairs = []
+    process_pairs_end = 0
+    build_pairs_end = 0
+    build_pairs_start = time.clock()
+
      # this makes the edges. looking at each pair of nodes
     for i in range(0, len(rna_seq_objs)):
         for j in range(i + 1, len(rna_seq_objs)):
             pair = RNASequencePair(
-                rna_seq_objs[i], rna_seq_objs[j], xgmml_obj
+                rna_seq_objs[i], rna_seq_objs[j]
             )
             pair.energy_delta = abs(
                 float(pair.sequence1.free_energy) - float(pair.sequence2.free_energy)
@@ -464,11 +481,23 @@ def find_edges_no_seed(rna_seq_objs, xgmml_obj, args, stats):
             seq_pairs.append(pair)
             # group things in batches of 10000  to find tree distances
             if len(seq_pairs) > 10000:
-                process_seq_pairs(seq_pairs, args, stats)
+                build_pairs_end = time.clock()
+                process_seq_pairs(seq_pairs, xgmml_obj, args, stats)
+                procs_pairs_end = time.clock()
+
+                build_time = build_pairs_end - build_pairs_start
+                procs_time = procs_pairs_end - build_pairs_end
+
+                print 'BUILD: {}'.format(build_time)
+                print 'PROCS: {}'.format(procs_time)
+                print 'PROCS > BUILD = {}'.format(procs_time > build_time)
+
                 # zero out the seq_pairs array and start refilling again
                 seq_pairs = []
+                build_pairs_start = time.clock()
+
     # flush out the last of the tree distance seq_pairs
-    process_seq_pairs(seq_pairs, args, stats)
+    process_seq_pairs(seq_pairs, xgmml_obj, args, stats)
 
 
 def print_stats(stats, args):
