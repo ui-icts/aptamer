@@ -244,19 +244,16 @@ def rna_distance(structures):
     return stdout_value #f: num1 \n f: num2 \n
 
 
-def process_seq_pairs(seq_pairs, args, stats):
-    """Runs a batch of RNASequence pairs."""
-    #print '\n\n'.join([str(z) for z in seq_pairs])
+def compute_tree_distances(seq_pairs):
+
     seq_to_tree = []
-    append_s = time.clock()
+
     for x in seq_pairs:
         seq_to_tree.append(x.sequence1.structure)
         seq_to_tree.append(x.sequence2.structure)
-    append_e = time.clock()
 
     tree_distance = rna_distance('\n'.join(seq_to_tree))
     tree_distance = tree_distance.strip('\n').split('\n')  # take off last lr
-    distance_e = time.clock()
 
     assert len(tree_distance) == len(seq_pairs), (
         'Error length of tree distance %s does not match length of seq_pairs '
@@ -264,19 +261,17 @@ def process_seq_pairs(seq_pairs, args, stats):
         % (len(tree_distance), len(seq_pairs))
     )
 
-    for i, x in enumerate(seq_pairs):
-        # TODO: I think seq_pairs[i] == x here
-        # should just use one or the other
-        x.tree_distance = tree_distance[i].split(' ')[1]
+    return [td.split(' ')[1] for td in tree_distance]
 
-    output_e = time.clock()
-    append_time = append_e - append_s
-    distance_time = distance_e - append_e
-    output_time = output_e - distance_e
-    print 'APPEND:   {}'.format(append_time)
-    print 'DISTANCE: {}'.format(distance_time)
-    print 'OUTPUT:   {}'.format(output_time)
-    
+
+def process_seq_pairs(seq_pairs, args):
+    """Runs a batch of RNASequence pairs."""
+
+    tree_distance = compute_tree_distances(seq_pairs)
+
+    for i, x in enumerate(seq_pairs):
+        x.tree_distance = tree_distance[i]
+
 
 def get_mfold_stats(det_filename):
     #fixed values within line
@@ -440,7 +435,7 @@ def find_edges_seed(rna_seq_objs, xgmml_obj, args, stats):
                 pair.sequence1.sequence, pair.sequence2.sequence
             )
             seq_pairs.append(pair)
-        process_seq_pairs(seq_pairs, args, stats)
+        process_seq_pairs(seq_pairs, args)
         for x in seq_pairs:
             if x.is_valid_edge:
                 x.sequence2.use_for_comparison = False
@@ -492,7 +487,9 @@ def find_edges_no_seed(rna_seq_objs, xgmml_obj, args, stats):
                 build_pairs_start = time.clock()
 
     # flush out the last of the tree distance seq_pairs
-    process_seq_pairs(seq_pairs, args, stats)
+    process_seq_pairs(seq_pairs, args)
+
+    stats = make_aptamer_stats()
 
     for pair in seq_pairs:
         pair.output(xgmml_obj, args)
