@@ -18,7 +18,7 @@ def main():
     cluster_size_re = re.compile('SIZE=(\d+)')
     in_fname = args.input_file
     in_fh = open(in_fname)
-    stats = {'energy_delta':[], 'edit_distance':[], 'tree_distance':[]}
+    stats = make_aptamer_stats()make_aptamer_stats()
     rna_seq_objs = []  # list of RNASequence objects
 
     process_fasta(in_fh, args, cluster_size_re, rna_seq_objs)
