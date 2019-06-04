@@ -456,6 +456,7 @@ def find_edges_no_seed(rna_seq_objs, xgmml_obj, args, stats):
     build_pairs_end = 0
     build_pairs_start = time.clock()
 
+    tree_distances_f = []
     # this makes the edges. looking at each pair of nodes
     for i in range(0, len(rna_seq_objs)):
         for j in range(i + 1, len(rna_seq_objs)):
@@ -472,7 +473,7 @@ def find_edges_no_seed(rna_seq_objs, xgmml_obj, args, stats):
             # group things in batches of 10000  to find tree distances
             if len(seq_pairs) > 10000:
                 build_pairs_end = time.clock()
-                process_seq_pairs(seq_pairs, args)
+                tree_distances_f.append( compute_tree_distances(seq_pairs) )
                 procs_pairs_end = time.clock()
 
                 build_time = build_pairs_end - build_pairs_start
@@ -487,11 +488,12 @@ def find_edges_no_seed(rna_seq_objs, xgmml_obj, args, stats):
                 build_pairs_start = time.clock()
 
     # flush out the last of the tree distance seq_pairs
-    process_seq_pairs(seq_pairs, args)
-
+    tree_distances_f.append( compute_tree_distances(seq_pairs) )
+    tree_distances = [td for sublist in tree_distances_f for td in sublist]
     stats = make_aptamer_stats()
 
-    for pair in seq_pairs:
+    for pair, td in zip(seq_pairs, tree_distances):
+        pair.tree_distance = td
         pair.output(xgmml_obj, args)
         append_pair_stats(stats, pair)
 
