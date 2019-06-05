@@ -245,7 +245,7 @@ def rna_distance(structures):
         encoding='ascii'
     )
     stdout_value, stderr_value = sffproc.communicate(structures)
-    return stdout_value #f: num1 \n f: num2 \n
+    return stdout_value  # f: num1 \n f: num2 \n
 
 
 def compute_tree_distances(seq_pairs):
@@ -278,9 +278,9 @@ def process_seq_pairs(seq_pairs, args):
 
 
 def get_mfold_stats(det_filename):
-    #fixed values within line
+    # fixed values within line
     valid_pattern = {
-        0:'dG', 1:'=', 3:'dH', 4:'=', 6:'dS', 7:'=', 9:'Tm', 10:'='
+        0: 'dG', 1: '=', 3: 'dH', 4: '=', 6: 'dS', 7: '=', 9: 'Tm', 10: '='
     }
     energy_stats = {}
     for key, value in valid_pattern.items():
@@ -456,9 +456,6 @@ def find_edges_seed(rna_seq_objs, xgmml_obj, args, stats):
 def find_edges_no_seed(rna_seq_objs, xgmml_obj, args, stats):
     """"Find edges using non-seed algorithm."""
     seq_pairs = []
-    process_pairs_end = 0
-    build_pairs_end = 0
-    build_pairs_start = time.clock()
 
     tree_distances_f = []
     with concurrent.futures.ThreadPoolExecutor() as executor:
@@ -477,20 +474,9 @@ def find_edges_no_seed(rna_seq_objs, xgmml_obj, args, stats):
                 seq_pairs.append(pair)
                 # group things in batches of 10000  to find tree distances
                 if len(seq_pairs) > 10000:
-                    build_pairs_end = time.clock()
                     tree_distances_f.append(executor.submit(compute_tree_distances, seq_pairs))
-                    procs_pairs_end = time.clock()
-
-                    build_time = build_pairs_end - build_pairs_start
-                    procs_time = procs_pairs_end - build_pairs_end
-
-                    print('BUILD: {}'.format(build_time))
-                    print('PROCS: {}'.format(procs_time))
-                    print('PROCS > BUILD = {}'.format(procs_time > build_time))
-
                     # zero out the seq_pairs array and start refilling again
                     seq_pairs = []
-                    build_pairs_start = time.clock()
 
         # flush out the last of the tree distance seq_pairs
         tree_distances_f.append(executor.submit(compute_tree_distances, seq_pairs))
@@ -501,7 +487,6 @@ def find_edges_no_seed(rna_seq_objs, xgmml_obj, args, stats):
             pair.tree_distance = td
             pair.output(xgmml_obj, args)
             append_pair_stats(stats, pair)
-
 
 
 def make_aptamer_stats():
