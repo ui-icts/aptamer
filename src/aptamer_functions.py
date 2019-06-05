@@ -26,6 +26,7 @@ import Levenshtein
 import time
 import pdb
 
+
 class RNASequence:
     """Graph node."""
     def __init__(self, name, cluster_size, seq):
@@ -488,7 +489,7 @@ def find_edges_no_seed(rna_seq_objs, xgmml_obj, args, stats):
                 build_pairs_start = time.clock()
 
     # flush out the last of the tree distance seq_pairs
-    tree_distances_f.append( compute_tree_distances(seq_pairs) )
+    tree_distances_f.append(compute_tree_distances(seq_pairs))
     tree_distances = [td for sublist in tree_distances_f for td in sublist]
     stats = make_aptamer_stats()
 
