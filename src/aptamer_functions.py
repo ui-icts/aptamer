@@ -30,7 +30,7 @@ from Bio import SeqIO
 import Levenshtein
 import time
 import pdb
-
+import concurrent.futures
 
 class RNASequence(object):
     """Graph node."""
@@ -199,7 +199,8 @@ def run_rnafold(seq, args):
         cmd = ['RNAfold -p -T 30 --noLP --noPS --noGU']
     sffproc = subprocess.Popen(
         cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
-        stdin=subprocess.PIPE, close_fds=True, shell=True
+        stdin=subprocess.PIPE, close_fds=True, shell=True,
+        encoding='ascii'
     )
     print('Command:', cmd[0])
     stdout_value, stderr_value = sffproc.communicate(seq)
@@ -224,7 +225,7 @@ def run_mfold(seq, args):
         cmd_string, stderr=subprocess.STDOUT, shell=True
     )
     if ret != 0:
-        print (
+        print(
             'Error when running mfold. Return code %d. '
             'See mfold log file for details.' % ret
         )
@@ -241,7 +242,7 @@ def rna_distance(structures):
     sffproc = subprocess.Popen(
         cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
         stdin=subprocess.PIPE, close_fds=True, shell=True,
-        encoding='utf8'
+        encoding='ascii'
     )
     stdout_value, stderr_value = sffproc.communicate(structures)
     return stdout_value #f: num1 \n f: num2 \n
@@ -460,45 +461,46 @@ def find_edges_no_seed(rna_seq_objs, xgmml_obj, args, stats):
     build_pairs_start = time.clock()
 
     tree_distances_f = []
-    # this makes the edges. looking at each pair of nodes
-    for i in range(0, len(rna_seq_objs)):
-        for j in range(i + 1, len(rna_seq_objs)):
-            pair = RNASequencePair(
-                rna_seq_objs[i], rna_seq_objs[j]
-            )
-            pair.energy_delta = abs(
-                float(pair.sequence1.free_energy) - float(pair.sequence2.free_energy)
-            )
-            pair.edit_distance = Levenshtein.distance(
-                pair.sequence1.sequence, pair.sequence2.sequence
-            )
-            seq_pairs.append(pair)
-            # group things in batches of 10000  to find tree distances
-            if len(seq_pairs) > 10000:
-                build_pairs_end = time.clock()
-                tree_distances_f.append( compute_tree_distances(seq_pairs) )
-                procs_pairs_end = time.clock()
+    with concurrent.futures.ThreadPoolExecutor(max_workers=4) as executor:
+        # this makes the edges. looking at each pair of nodes
+        for i in range(0, len(rna_seq_objs)):
+            for j in range(i + 1, len(rna_seq_objs)):
+                pair = RNASequencePair(
+                    rna_seq_objs[i], rna_seq_objs[j]
+                )
+                pair.energy_delta = abs(
+                    float(pair.sequence1.free_energy) - float(pair.sequence2.free_energy)
+                )
+                pair.edit_distance = Levenshtein.distance(
+                    pair.sequence1.sequence, pair.sequence2.sequence
+                )
+                seq_pairs.append(pair)
+                # group things in batches of 10000  to find tree distances
+                if len(seq_pairs) > 10000:
+                    build_pairs_end = time.clock()
+                    tree_distances_f.append(executor.submit(compute_tree_distances, seq_pairs))
+                    procs_pairs_end = time.clock()
 
-                build_time = build_pairs_end - build_pairs_start
-                procs_time = procs_pairs_end - build_pairs_end
+                    build_time = build_pairs_end - build_pairs_start
+                    procs_time = procs_pairs_end - build_pairs_end
 
-                print('BUILD: {}'.format(build_time))
-                print('PROCS: {}'.format(procs_time))
-                print('PROCS > BUILD = {}'.format(procs_time > build_time))
+                    print('BUILD: {}'.format(build_time))
+                    print('PROCS: {}'.format(procs_time))
+                    print('PROCS > BUILD = {}'.format(procs_time > build_time))
 
-                # zero out the seq_pairs array and start refilling again
-                seq_pairs = []
-                build_pairs_start = time.clock()
+                    # zero out the seq_pairs array and start refilling again
+                    seq_pairs = []
+                    build_pairs_start = time.clock()
 
-    # flush out the last of the tree distance seq_pairs
-    tree_distances_f.append(compute_tree_distances(seq_pairs))
-    tree_distances = [td for sublist in tree_distances_f for td in sublist]
-    stats = make_aptamer_stats()
+        # flush out the last of the tree distance seq_pairs
+        tree_distances_f.append(executor.submit(compute_tree_distances, seq_pairs))
+        tree_distances = [td for sublist in tree_distances_f for td in sublist.result()]
+        stats = make_aptamer_stats()
 
-    for pair, td in zip(seq_pairs, tree_distances):
-        pair.tree_distance = td
-        pair.output(xgmml_obj, args)
-        append_pair_stats(stats, pair)
+        for pair, td in zip(seq_pairs, tree_distances):
+            pair.tree_distance = td
+            pair.output(xgmml_obj, args)
+            append_pair_stats(stats, pair)
 
 
 
