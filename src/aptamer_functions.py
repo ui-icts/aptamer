@@ -323,28 +323,38 @@ def process_fasta(in_fh, args, cluster_size_re, rna_seq_objs):
     """Process input file as fasta. Populate RNASequence (graph vertex)
     objects.
     """
-    for record in SeqIO.parse(in_fh, 'fasta'):
-        sequence = '%s%s%s'.replace('T', 'U') % (
-            args.prefix, str(record.seq), args.suffix
-        )
-        cluster_size = 1
-        try:
-            cluster_size = cluster_size_re.search(record.description)
-            cluster_size = cluster_size.group(1)
-        except AttributeError:
-            print('Not able to find cluster size. Setting to 1.')
-        if cluster_size is None:
-            cluster_size = 1
 
-        # find structure
-        curr_seq = RNASequence(record.id, cluster_size, sequence)
-        if args.run_mfold:
-            curr_seq.structure, curr_seq.energy_dict = run_mfold(
-                sequence, args
+    folds = []
+    with concurrent.futures.ThreadPoolExecutor() as executor:
+        for record in SeqIO.parse(in_fh, 'fasta'):
+            sequence = '%s%s%s'.replace('T', 'U') % (
+                args.prefix, str(record.seq), args.suffix
             )
+            cluster_size = 1
+            try:
+                cluster_size = cluster_size_re.search(record.description)
+                cluster_size = cluster_size.group(1)
+            except AttributeError:
+                print('Not able to find cluster size. Setting to 1.')
+
+            if cluster_size is None:
+                cluster_size = 1
+
+            # find structure
+            curr_seq = RNASequence(record.id, cluster_size, sequence)
+            if args.run_mfold:
+                mfold_f = executor.submit(run_mfold, sequence, args)
+                folds.append(mfold_f)
+            else:
+                rnafold_f = executor.submit(run_rnafold, sequence, args)
+                folds.append(rnafold_f)
+
+    for folded_output in folds:
+        if args.run_mfold:
+            curr_seq.structure, curr_seq.energy_dict = folded_output.result()
             curr_seq.free_energy = curr_seq.energy_dict['dG']
         else:
-            rnafold_out = run_rnafold(sequence, args)
+            rnafold_out = folded_output.result()
             rnafold_out = rnafold_out.split('\n')
             try:
                 curr_seq.structure, curr_seq.free_energy = (
@@ -373,7 +383,7 @@ def process_fasta(in_fh, args, cluster_size_re, rna_seq_objs):
                     )
                 ))
             except IndexError:
-                print (
+                print(
                     'Error parsing RNAfold output. '
                     '(Couldn\'t find statistics.) Please check '
                     'RNAfold options.'
