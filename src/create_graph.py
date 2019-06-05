@@ -8,6 +8,7 @@ Outputs an xgmml graph file in which vertices are RNA
 sequences. Edges are created between vertices that have a small enough
 tree distance or edit distance between them. (Specified in args.)
 """
+from __future__ import print_function
 
 from aptamer_functions import *
 import time
@@ -26,7 +27,7 @@ def main():
     xgmml_obj = XGMML(in_fname)
 
     # nodes are now populated. find edges.
-    print 'Finding edges...'
+    print('Finding edges...')
     if args.seed:
         find_edges_seed(rna_seq_objs, xgmml_obj, args, stats)
     else:
@@ -41,11 +42,11 @@ def main():
         out_xgmml_f.write(xgmml_obj.output(args))
 
     print_stats(stats, args)
-    print '\n\nOutput written to %s' % (
+    print('\n\nOutput written to %s' % (
         out_fasta_fname if (args.calc_structures) else out_xgmml_fname
-    )
+    ))
     output_log(args, start_time)
-    print
+    print()
     in_fh.close()
 
 
@@ -104,7 +105,7 @@ def parse_arguments():
 
     if len(sys.argv) <= 1:
         parser.print_help()
-        print '\nError: Input file not specified.'
+        print('\nError: Input file not specified.')
         sys.exit(1)
 
     args = parser.parse_args()
@@ -113,9 +114,9 @@ def parse_arguments():
     args.edge_type = args.edge_type.lower()
     if args.edge_type not in ['edit', 'tree', 'both']:
         parser.print_help()
-        print 'Error: Edge type option not recognized: %s' % (
+        print('Error: Edge type option not recognized: %s' % (
             args.edge_type
-        )
+        ))
         sys.exit(1)
 
     args.calc_structures = False
@@ -132,7 +133,7 @@ def output_log(args, start_time):
     with open(out_fname, 'w') as out_f:
         out_f.write('Command: %s\n' % ' '.join(sys.argv))
         out_f.write('Start time: %s\n' % start_time)
-    print 'Log written to %s' % out_fname
+    print('Log written to %s' % out_fname)
 
 
 if __name__ == '__main__':

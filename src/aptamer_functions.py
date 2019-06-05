@@ -11,6 +11,7 @@ tree distance or edit distance between them.
 
 Overall statistics are printed to standard output.
 """
+from __future__ import print_function
 
 import os
 import sys
@@ -42,9 +43,9 @@ class RNASequence:
         self.use_for_comparison = True  # used only with seed option
 
     def output(self):
-        print ">%s  " % (self.name)
-        print self.sequence
-        print self.structure
+        print(">%s  " % (self.name))
+        print(self.sequence)
+        print(self.structure)
 
     def __str__(self):
         return '\n'.join(
@@ -182,9 +183,9 @@ class XGMML:
 
 
 def run_rnafold(seq, args):
-    print '##################'
-    print 'Running RNAFold...'
-    print '##################'
+    print('##################')
+    print('Running RNAFold...')
+    print('##################')
     cmd = None
     if args.pass_options is not None:
         cmd = ['RNAfold %s' % args.pass_options]
@@ -196,15 +197,15 @@ def run_rnafold(seq, args):
         cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
         stdin=subprocess.PIPE, close_fds=True, shell=True
     )
-    print 'Command:', cmd[0]
+    print('Command:', cmd[0])
     stdout_value, stderr_value = sffproc.communicate(seq)
     return stdout_value
 
 
 def run_mfold(seq, args):
-    print '##################'
-    print 'Running mfold...'
-    print '##################'
+    print('##################')
+    print('Running mfold...')
+    print('##################')
     if not os.path.exists('mfold_out'):
         os.mkdir('mfold_out')
     os.chdir('mfold_out')
@@ -224,7 +225,7 @@ def run_mfold(seq, args):
             'See mfold log file for details.' % ret
         )
         sys.exit(ret)
-    print
+    print()
     structure = convert_ct_to_bracket_dot('%s.ct' % temp_filename)
     energy_stats = get_mfold_stats('%s.det' % temp_filename)
     os.chdir('..')
@@ -325,7 +326,7 @@ def process_fasta(in_fh, args, cluster_size_re, rna_seq_objs):
             cluster_size = cluster_size_re.search(record.description)
             cluster_size = cluster_size.group(1)
         except AttributeError:
-            print 'Not able to find cluster size. Setting to 1.'
+            print('Not able to find cluster size. Setting to 1.')
         if cluster_size is None:
             cluster_size = 1
 
@@ -344,10 +345,10 @@ def process_fasta(in_fh, args, cluster_size_re, rna_seq_objs):
                     rnafold_out[1].split(' (')
                 )
             except (ValueError, IndexError):
-                print 'Error running RNAfold:\n%s\nExiting.' % rnafold_out
+                print('Error running RNAfold:\n%s\nExiting.' % rnafold_out)
                 sys.exit(1)
 
-            print '%s\n' % rnafold_out
+            print('%s\n' % rnafold_out)
             try:
                 curr_seq.free_energy = abs(
                     float(curr_seq.free_energy.replace(')', ''))
@@ -401,7 +402,7 @@ def process_struct_fasta(in_fh, args, cluster_size_re, rna_seq_objs):
             cluster_size = cluster_size_re.search(header)
             cluster_size = cluster_size.group(1)
         except AttributeError:
-            print 'Not able to find cluster size. Setting to 1.'
+            print('Not able to find cluster size. Setting to 1.')
         if cluster_size is None:
             cluster_size = 1
         header = header.replace('>', '').strip()
@@ -440,9 +441,9 @@ def find_edges_seed(rna_seq_objs, xgmml_obj, args, stats):
         new_nodes_copy = [
             z for z in nodes_copy if z.use_for_comparison
         ]
-        print 'Number of RNA sequences reduced from %d to %d ' % (
+        print('Number of RNA sequences reduced from %d to %d ' % (
             len(nodes_copy), len(new_nodes_copy)
-        )
+        ))
         nodes_copy = new_nodes_copy
 
 
@@ -476,9 +477,9 @@ def find_edges_no_seed(rna_seq_objs, xgmml_obj, args, stats):
                 build_time = build_pairs_end - build_pairs_start
                 procs_time = procs_pairs_end - build_pairs_end
 
-                print 'BUILD: {}'.format(build_time)
-                print 'PROCS: {}'.format(procs_time)
-                print 'PROCS > BUILD = {}'.format(procs_time > build_time)
+                print('BUILD: {}'.format(build_time))
+                print('PROCS: {}'.format(procs_time))
+                print('PROCS > BUILD = {}'.format(procs_time > build_time))
 
                 # zero out the seq_pairs array and start refilling again
                 seq_pairs = []
@@ -514,28 +515,28 @@ def append_pair_stats(stats, pair):
 
 
 def print_stats(stats, args):
-    print '\nOverall Statistics:'
-    print '--------------------'
+    print('\nOverall Statistics:')
+    print('--------------------')
     for stat in stats:
         stat_label = stat.capitalize().replace('_', ' ')
         if any(stats[stat]):
-            print '%s mean: %.3g' % (stat_label, numpy.mean(stats[stat]))
-            print '%s SD: %.3g' % (stat_label, numpy.std(stats[stat]))
-            print '%s SEM: %.3g' % (stat_label, scipy.stats.sem(stats[stat]))
+            print('%s mean: %.3g' % (stat_label, numpy.mean(stats[stat])))
+            print('%s SD: %.3g' % (stat_label, numpy.std(stats[stat])))
+            print('%s SEM: %.3g' % (stat_label, scipy.stats.sem(stats[stat])))
         else:
-            print '%s mean: N/A' % (stat_label)
-            print '%s SD: N/A' % (stat_label)
-            print '%s SEM: N/A' % (stat_label)
-        print
+            print('%s mean: N/A' % (stat_label))
+            print('%s SD: N/A' % (stat_label))
+            print('%s SEM: N/A' % (stat_label))
+        print()
 
     for stat_pair in itertools.combinations(stats, 2):
-        print 'Pearson correlation(%s, %s):' % (
+        print('Pearson correlation(%s, %s):' % (
             stat_pair[0], stat_pair[1]
-        ),
+        ), end=' ')
         if args.calc_structures:
             pearson_coeff, p_value = scipy.stats.pearsonr(
                 stats[stat_pair[0]], stats[stat_pair[1]]
             )
-            print '%.3g, p=%.3g' % (pearson_coeff, p_value)
+            print('%.3g, p=%.3g' % (pearson_coeff, p_value))
         else:
-            print 'N/A'
+            print('N/A')

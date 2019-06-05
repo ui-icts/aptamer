@@ -7,6 +7,7 @@ Outputs a fasta with bracket-dot structures.
 
 Overall statistics are printed to standard output.
 """
+from __future__ import print_function
 
 from aptamer_functions import *
 import time
@@ -37,19 +38,19 @@ def main():
 
     # nodes are now populated. find edges.
     if args.calculate_stats:
-        print 'Calculating stats...'
+        print('Calculating stats...')
         find_edges_no_seed(rna_seq_objs, xgmml_obj, args, stats)
         print_stats(stats, args)
     else:
-        print 'Stats calculation disabled'
+        print('Stats calculation disabled')
 
-    print '\n'
-    print 'Structure fasta written to %s' % (
+    print('\n')
+    print('Structure fasta written to %s' % (
         out_fasta_fname if (args.calc_structures) else out_xgmml_fname
-    )
+    ))
     output_stats_tsv(rna_seq_objs, args)
     output_log(args, start_time)
-    print
+    print()
     in_fh.close()
 
 
@@ -137,7 +138,7 @@ def parse_arguments():
 
     if len(sys.argv) <= 1:
         parser.print_help()
-        print '\nError: Input file not specified.'
+        print('\nError: Input file not specified.')
         sys.exit(1)
 
     # workaround for argparse bug
@@ -157,9 +158,9 @@ def parse_arguments():
     # validate args
     if args.vienna_version not in ['1', '2', 1, 2]:
         parser.print_help()
-        print 'Error: ViennaRNA package version not recognized: %s' % (
+        print('Error: ViennaRNA package version not recognized: %s' % (
             args.vienna_version
-        )
+        ))
         sys.exit(1)
 
     args.calc_structures = True
@@ -207,7 +208,7 @@ def output_stats_tsv(rna_seq_objs, args):
         out_f.write('%s\n' % '\t'.join(categs))
         for x in out_list:
             out_f.write('%s\n' % '\t'.join(x))
-    print 'Statistics written to %s' % out_fname
+    print('Statistics written to %s' % out_fname)
 
 
 def output_log(args, start_time):
@@ -245,7 +246,7 @@ def output_log(args, start_time):
         else:
             write_version_str(out_f, 'Vienna RNAFold', 'RNAfold --version')
         out_f.write('Citation: %s\n' % citation)
-    print 'Log written to %s' % out_fname
+    print('Log written to %s' % out_fname)
 
 
 def write_version_str(out_f, program_name, version_command):

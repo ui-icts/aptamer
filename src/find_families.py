@@ -1,4 +1,5 @@
 """Find connected components from an xgmml file"""
+from __future__ import print_function
 
 import sys
 import os
@@ -44,7 +45,7 @@ def main():
         out_f_name = '%s.tsv' % args.input_file
     with open(out_f_name, 'w') as out_f:
         output_families(nodes, families, out_f)
-    print 'Output written to %s' % out_f_name
+    print('Output written to %s' % out_f_name)
 
 
 def parse_arguments():
@@ -65,7 +66,7 @@ def parse_arguments():
     )
     if len(sys.argv) <= 1:
         parser.print_help()
-        print '\nError: Input file not specified.'
+        print('\nError: Input file not specified.')
         sys.exit(1)
 
     return parser.parse_args()
@@ -118,7 +119,7 @@ def read_in_input_file(in_f):
 
         elif line.startswith('</edge'):
             if not source or not target:
-                print 'Could not find source/ target for edge.'
+                print('Could not find source/ target for edge.')
                 sys.exit(1)
             if edit_dist is None:
                 if source and target:
@@ -127,7 +128,7 @@ def read_in_input_file(in_f):
                         'edge (%s, %s).' % (source, target)
                     )
                 else:
-                    print 'Could not find edit distance for edge.'
+                    print('Could not find edit distance for edge.')
                 sys.exit(1)
             edges.append(
                 Edge(source=source, target=target, edit_dist=edit_dist)
