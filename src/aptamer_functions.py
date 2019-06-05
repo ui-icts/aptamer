@@ -41,12 +41,8 @@ class RNASequence:
         self.ensemble_diversity = None
         self.use_for_comparison = True  # used only with seed option
 
-    def full_output(self):
-        attrs = vars(self)
-        print ','.join('%s:%s' % item for item in attrs.items())
-
     def output(self):
-        print '>%s  ' % (self.name)
+        print ">%s  " % (self.name)
         print self.sequence
         print self.structure
 
