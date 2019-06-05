@@ -19,7 +19,7 @@ def main():
     args = parse_arguments()
     cluster_size_re = re.compile('SIZE=(\d+)')
     in_fname = args.input_file
-    in_fh = open(in_fname)
+    in_fh = open(in_fname, 'r')
     stats = make_aptamer_stats()
     rna_seq_objs = []  # list of RNASequence objects
 

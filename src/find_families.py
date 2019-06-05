@@ -21,7 +21,7 @@ class Edge(object):
 
 def main():
     args = parse_arguments()
-    with open(args.input_file) as in_f:
+    with open(args.input_file, 'r') as in_f:
         nodes, edges = read_in_input_file(in_f)
 
     families = {}  # {max edit dist: list of connected components}

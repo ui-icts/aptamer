@@ -240,7 +240,8 @@ def rna_distance(structures):
     cmd = ['RNAdistance']
     sffproc = subprocess.Popen(
         cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
-        stdin=subprocess.PIPE, close_fds=True, shell=True
+        stdin=subprocess.PIPE, close_fds=True, shell=True,
+        encoding='utf8'
     )
     stdout_value, stderr_value = sffproc.communicate(structures)
     return stdout_value #f: num1 \n f: num2 \n
@@ -284,7 +285,7 @@ def get_mfold_stats(det_filename):
     for key, value in valid_pattern.items():
         if value != '=':
             energy_stats[value] = None
-    with open(det_filename) as f:
+    with open(det_filename, 'r') as f:
         for i, row in enumerate(f):
             if i == 5: #6th line
                 row = row.split()
@@ -302,7 +303,7 @@ def get_mfold_stats(det_filename):
 
 def convert_ct_to_bracket_dot(ct_filename):
     bracket_dot = ''
-    with open(ct_filename) as f:
+    with open(ct_filename, 'r') as f:
         for row in f:
             row = row.split()
             # used to grab energy but not needed except to skip first line
