@@ -1,9 +1,9 @@
 pkg_name=aptamer-scripts
 pkg_origin=chrisortman
-pkg_version="2.0.0"
+pkg_version="3.0.0"
 pkg_deps=(
   core/groff
-  core/python2
+  core/python
   core/glibc
   core/gcc-libs
   core/gcc
@@ -13,7 +13,6 @@ pkg_deps=(
 )
 pkg_build_deps=(
   core/cacerts
-  core/virtualenv
   core/git
   core/tar
   core/coreutils
@@ -49,7 +48,7 @@ do_unpack() {
 }
 
 do_prepare() {
- virtualenv "$pkg_prefix"
+ python -m venv "$pkg_prefix"
  # shellcheck source=/dev/null
  source "$pkg_prefix/bin/activate"
 }
@@ -70,13 +69,13 @@ do_install() {
   pip install biopython
   pip install python-Levenshtein
   
-  virtualenv --relocatable $pkg_prefix
+  # virtualenv --relocatable $pkg_prefix
   
   mkdir -p ${pkg_prefix}/scripts
-  cp -a aptamer_functions.py ${pkg_prefix}/scripts
-  cp -a create_graph.py ${pkg_prefix}/scripts
-  cp -a find_families.py ${pkg_prefix}/scripts
-  cp -a predict_structures.py ${pkg_prefix}/scripts
+  cp -a src/aptamer_functions.py ${pkg_prefix}/scripts
+  cp -a src/create_graph.py ${pkg_prefix}/scripts
+  cp -a src/find_families.py ${pkg_prefix}/scripts
+  cp -a src/predict_structures.py ${pkg_prefix}/scripts
 
   cat << DO_SCRIPT > ${pkg_prefix}/bin/python-wrapper
 #!/bin/sh
