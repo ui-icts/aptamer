@@ -461,7 +461,7 @@ def find_edges_no_seed(rna_seq_objs, xgmml_obj, args, stats):
     build_pairs_start = time.clock()
 
     tree_distances_f = []
-    with concurrent.futures.ThreadPoolExecutor(max_workers=4) as executor:
+    with concurrent.futures.ThreadPoolExecutor() as executor:
         # this makes the edges. looking at each pair of nodes
         for i in range(0, len(rna_seq_objs)):
             for j in range(i + 1, len(rna_seq_objs)):
