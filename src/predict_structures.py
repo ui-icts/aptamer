@@ -253,7 +253,8 @@ def output_log(args, start_time):
 def write_version_str(out_f, program_name, version_command):
     p = subprocess.Popen(
         version_command.split(), stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE
+        stderr=subprocess.PIPE,
+        encoding='ascii'
     )
     stdout, stderr = p.communicate()
     if stderr:
