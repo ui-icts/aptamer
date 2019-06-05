@@ -9,6 +9,7 @@ Overall statistics are printed to standard output.
 """
 from __future__ import print_function
 
+from builtins import str
 from aptamer_functions import *
 import time
 
@@ -149,7 +150,7 @@ def parse_arguments():
             next_arg = sys.argv[pass_options_index + 1]
             if (
                 (next_arg.startswith('-')) and
-                (next_arg not in parser._option_string_actions.keys())
+                (next_arg not in list(parser._option_string_actions.keys()))
             ):
                 sys.argv[pass_options_index + 1] = ' %s' % next_arg
 
@@ -178,11 +179,11 @@ def output_stats_tsv(rna_seq_objs, args):
         out_fname = args.input_file + '.properties'
 
     # get header
-    categs = rna_seq_objs[0].__dict__.keys()
+    categs = list(rna_seq_objs[0].__dict__.keys())
     expand_mfold = False
     if args.run_mfold and ('energy_dict' in categs):
         expand_mfold = True
-        energy_dict_keys = rna_seq_objs[0].energy_dict.keys()
+        energy_dict_keys = list(rna_seq_objs[0].energy_dict.keys())
         categs.remove('energy_dict')
         categs += ['mfold_%s' % z for z in energy_dict_keys]
     # make "name" the first column

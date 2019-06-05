@@ -13,6 +13,10 @@ Overall statistics are printed to standard output.
 """
 from __future__ import print_function
 
+from builtins import zip
+from builtins import str
+from builtins import range
+from builtins import object
 import os
 import sys
 import re
@@ -28,7 +32,7 @@ import time
 import pdb
 
 
-class RNASequence:
+class RNASequence(object):
     """Graph node."""
     def __init__(self, name, cluster_size, seq):
         self.name = name  # integer ID
@@ -53,7 +57,7 @@ class RNASequence:
         )
 
 
-class RNASequencePair:
+class RNASequencePair(object):
     """Graph edge. Pair of RNASequence objects."""
     def __init__(self, seq1, seq2):
         self.sequence1 = seq1
@@ -106,7 +110,7 @@ class RNASequencePair:
         ])
 
 
-class XGMML:
+class XGMML(object):
     """Graph. XGMML file."""
     def __init__(self, name):
         self.name = name
@@ -277,7 +281,7 @@ def get_mfold_stats(det_filename):
         0:'dG', 1:'=', 3:'dH', 4:'=', 6:'dS', 7:'=', 9:'Tm', 10:'='
     }
     energy_stats = {}
-    for key, value in valid_pattern.iteritems():
+    for key, value in valid_pattern.items():
         if value != '=':
             energy_stats[value] = None
     with open(det_filename) as f:
