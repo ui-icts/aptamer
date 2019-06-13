@@ -10,7 +10,7 @@ Overall statistics are printed to standard output.
 from __future__ import print_function
 
 from builtins import str
-from helpers import *
+from helpers.functions import *
 import time
 
 
