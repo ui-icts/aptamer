@@ -12,7 +12,7 @@ pushd "data/$DATA_NAME"
 
 cp $INPUT_FILE_ABS ./$FILE_NAME
 
-python ../../src/predict_structures.py $FILE_NAME $@
+python ../../aptamer/predict_structures.py $FILE_NAME $@
 
 popd
 

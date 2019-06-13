@@ -10,7 +10,7 @@ tree distance or edit distance between them. (Specified in args.)
 """
 from __future__ import print_function
 
-from aptamer_functions import *
+from helpers import *
 import time
 
 
