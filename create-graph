@@ -1,5 +1,5 @@
 #!/bin/bash
-set -x
+set +x
 
 INPUT_FILE_ABS=$(python -c "import os; print(os.path.realpath('$1'))")
 shift
@@ -8,7 +8,8 @@ DATA_DIR=$(dirname -- "$INPUT_FILE_ABS")
 
 pushd "$DATA_DIR"
 
-python ../../src/create_graph.py $FILE_NAME $@
+PYTHONPATH="../../src:$PYTHONPATH" mprof run --python --include-children python ../../src/create_graph.py $FILE_NAME $@
+# python ../../src/create_graph.py $FILE_NAME $@
 
 popd
 
