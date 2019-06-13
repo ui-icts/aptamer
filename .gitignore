@@ -1,5 +1,5 @@
 results
 data/*
-src/.mypy_cache/
-src/__pycache__/
+.mypy_cache
+__pycache__
 
