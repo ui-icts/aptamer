@@ -31,6 +31,7 @@ import Levenshtein
 import time
 import pdb
 import concurrent.futures
+from multiprocessing import Pool
 
 class RNASequence(object):
     """Graph node."""
@@ -250,13 +251,16 @@ def rna_distance(structures):
 
 def compute_tree_distances(seq_pairs):
 
-    seq_to_tree = []
 
+    # Collect all the structures into a single string
+    # so that it can be piped to RNADistance
+    seq_to_tree = []
     for x in seq_pairs:
         seq_to_tree.append(x.sequence1.structure)
         seq_to_tree.append(x.sequence2.structure)
+    string_of_sequences = '\n'.join(seq_to_tree)
 
-    tree_distance = rna_distance('\n'.join(seq_to_tree))
+    tree_distance = rna_distance(string_of_sequences)
     tree_distance = tree_distance.strip('\n').split('\n')  # take off last lr
 
     assert len(tree_distance) == len(seq_pairs), (
@@ -406,21 +410,26 @@ def process_struct_fasta(in_fh, args, cluster_size_re, rna_seq_objs):
             break
         sequence = sequence.strip('\n\r')
         structure = structure.strip('\n\r')
+
         if not structure.count('(') == structure.count(')'):
             continue
+
         if args.calc_structures:
             sequence = '%s%s%s'.replace('T', 'U') % (
                 args.prefix, sequence, args.suffix
             )
         else:
             sequence = sequence.replace('T', 'U')
+
         try:
             cluster_size = cluster_size_re.search(header)
             cluster_size = cluster_size.group(1)
         except AttributeError:
             print('Not able to find cluster size. Setting to 1.')
+
         if cluster_size is None:
             cluster_size = 1
+
         header = header.replace('>', '').strip()
         curr_seq = RNASequence(header, cluster_size, sequence)
         curr_seq.free_energy = 1
@@ -428,6 +437,7 @@ def process_struct_fasta(in_fh, args, cluster_size_re, rna_seq_objs):
         curr_seq.ensemble_probability = 1
         curr_seq.ensemble_diversity = 1
         curr_seq.structure = structure
+
         rna_seq_objs.append(curr_seq)
 
 
@@ -462,41 +472,49 @@ def find_edges_seed(rna_seq_objs, xgmml_obj, args, stats):
         ))
         nodes_copy = new_nodes_copy
 
+def pairwise_combine(rna_seq_objs):
+    """
+    Combines the RNASequence objects into pairs.
+    A B C D -> [A B], [A C], [A D], [B, C] ...
+    """
+    for i in range(0, len(rna_seq_objs)):
+        for j in range(i + 1, len(rna_seq_objs)):
+            pair = RNASequencePair(
+                    rna_seq_objs[i], rna_seq_objs[j]
+                    )
+            pair.energy_delta = abs(
+                    float(pair.sequence1.free_energy) - float(pair.sequence2.free_energy)
+                    )
+            pair.edit_distance = Levenshtein.distance(
+                    pair.sequence1.sequence, pair.sequence2.sequence
+                    )
+            yield pair
+
+
+def grouper(n, iterable):
+    """
+    >>> list(grouper(3, 'ABCDEFG'))
+    [['A', 'B', 'C'], ['D', 'E', 'F'], ['G']]
+    """
+    iterable = iter(iterable)
+    return iter(lambda: list(itertools.islice(iterable, n)), [])
+
 
 def find_edges_no_seed(rna_seq_objs, xgmml_obj, args, stats):
     """"Find edges using non-seed algorithm."""
-    seq_pairs = []
 
-    tree_distances_f = []
-    with concurrent.futures.ThreadPoolExecutor() as executor:
-        # this makes the edges. looking at each pair of nodes
-        for i in range(0, len(rna_seq_objs)):
-            for j in range(i + 1, len(rna_seq_objs)):
-                pair = RNASequencePair(
-                    rna_seq_objs[i], rna_seq_objs[j]
-                )
-                pair.energy_delta = abs(
-                    float(pair.sequence1.free_energy) - float(pair.sequence2.free_energy)
-                )
-                pair.edit_distance = Levenshtein.distance(
-                    pair.sequence1.sequence, pair.sequence2.sequence
-                )
-                seq_pairs.append(pair)
-                # group things in batches of 10000  to find tree distances
-                if len(seq_pairs) > 10000:
-                    tree_distances_f.append(executor.submit(compute_tree_distances, seq_pairs))
-                    # zero out the seq_pairs array and start refilling again
-                    seq_pairs = []
+    pool = Pool()
 
-        # flush out the last of the tree distance seq_pairs
-        tree_distances_f.append(executor.submit(compute_tree_distances, seq_pairs))
-        tree_distances = [td for sublist in tree_distances_f for td in sublist.result()]
-        stats = make_aptamer_stats()
-
-        for pair, td in zip(seq_pairs, tree_distances):
-            pair.tree_distance = td
-            pair.output(xgmml_obj, args)
-            append_pair_stats(stats, pair)
+    seq_pairs = [p for p in pairwise_combine(rna_seq_objs)]
+    batches = grouper(10000, seq_pairs)
+    batch_tree_distances = pool.map(compute_tree_distances, batches)
+    tree_distances = itertools.chain.from_iterable(batch_tree_distances)
+    combined = itertools.zip_longest(seq_pairs, tree_distances, fillvalue=0)
+    
+    for pair, td in combined:
+        pair.tree_distance = td
+        pair.output(xgmml_obj, args)
+        append_pair_stats(stats, pair)
 
 
 def make_aptamer_stats():
