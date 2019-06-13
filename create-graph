@@ -8,8 +8,8 @@ DATA_DIR=$(dirname -- "$INPUT_FILE_ABS")
 
 pushd "$DATA_DIR"
 
-PYTHONPATH="../../aptamer:$PYTHONPATH" mprof run --python --include-children python ../../aptamer/create_graph.py $FILE_NAME $@
-# python ../../aptamer/create_graph.py $FILE_NAME $@
+# PYTHONPATH="../../aptamer:$PYTHONPATH" mprof run --python --include-children python ../../aptamer/create_graph.py $FILE_NAME $@
+python ../../aptamer/create_graph.py $FILE_NAME $@
 
 popd
 
