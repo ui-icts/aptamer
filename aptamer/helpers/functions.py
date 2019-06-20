@@ -68,8 +68,39 @@ class RNASequencePair(object):
         self.tree_distance = None
         self.is_valid_edge = False  # used only with seed option
 
+        self.update_energy_delta()
+        self.update_edit_distance()
+        self.update_tree_distance()
+
     def __str__(self):
         return '%s\n---\n%s' % (str(self.sequence1), str(self.sequence2))
+
+    def update_energy_delta(self):
+        self.energy_delta = abs(
+                float(self.sequence1.free_energy) - float(self.sequence2.free_energy)
+                )
+    
+    def update_edit_distance(self):
+        self.edit_distance = Levenshtein.distance(
+                self.sequence1.sequence, self.sequence2.sequence
+                )
+
+    def update_tree_distance(self):
+        seq_to_tree = []
+        seq_to_tree.append(self.sequence1.structure)
+        seq_to_tree.append(self.sequence2.structure)
+        string_of_sequences = '\n'.join(seq_to_tree)
+
+        tree_distance = rna_distance(string_of_sequences)
+        tree_distance = tree_distance.strip('\n').split('\n')  # take off last lr
+
+        assert len(tree_distance) == 1, (
+            'Error length of tree distance %s does not match length of seq_pairs '
+            '%s and should -- check installation of RNAdistance'
+            % (len(tree_distance), 1)
+        )
+
+        self.tree_distance = tree_distance[0].split(' ')[1]
 
     def output(self, xgmml, args):
         # if the xgmml data structure does not have this node, add it
@@ -250,8 +281,6 @@ def rna_distance(structures):
 
 
 def compute_tree_distances(seq_pairs):
-
-
     # Collect all the structures into a single string
     # so that it can be piped to RNADistance
     seq_to_tree = []
@@ -482,12 +511,6 @@ def pairwise_combine(rna_seq_objs):
             pair = RNASequencePair(
                     rna_seq_objs[i], rna_seq_objs[j]
                     )
-            pair.energy_delta = abs(
-                    float(pair.sequence1.free_energy) - float(pair.sequence2.free_energy)
-                    )
-            pair.edit_distance = Levenshtein.distance(
-                    pair.sequence1.sequence, pair.sequence2.sequence
-                    )
             yield pair
 
 
@@ -505,16 +528,12 @@ def find_edges_no_seed(rna_seq_objs, xgmml_obj, args, stats):
 
     pool = Pool()
 
-    seq_pairs = [p for p in pairwise_combine(rna_seq_objs)]
-    batches = grouper(10000, seq_pairs)
-    batch_tree_distances = pool.map(compute_tree_distances, batches)
-    tree_distances = itertools.chain.from_iterable(batch_tree_distances)
-    combined = itertools.zip_longest(seq_pairs, tree_distances, fillvalue=0)
-    
-    for pair, td in combined:
-        pair.tree_distance = td
+    seq_pairs = (p for p in itertools.combinations(rna_seq_objs, 2))
+    pdb.set_trace()
+    pairs = pool.starmap(RNASequencePair, seq_pairs)
+    for pair in pairs:
         pair.output(xgmml_obj, args)
-        append_pair_stats(stats, pair)
+        append_pair_stats(stats,pair)
 
 
 def make_aptamer_stats():
