@@ -30,6 +30,7 @@ from Bio import SeqIO
 import Levenshtein
 import time
 import pdb
+import RNA
 import concurrent.futures
 from multiprocessing import Pool
 
@@ -82,25 +83,38 @@ class RNASequencePair(object):
     
     def update_edit_distance(self):
         self.edit_distance = Levenshtein.distance(
-                self.sequence1.sequence, self.sequence2.sequence
-                )
+                self.sequence1.sequence,
+                self.sequence2.sequence
+                                                )
 
     def update_tree_distance(self):
-        seq_to_tree = []
-        seq_to_tree.append(self.sequence1.structure)
-        seq_to_tree.append(self.sequence2.structure)
-        string_of_sequences = '\n'.join(seq_to_tree)
+        # seq_to_tree = []
+        # seq_to_tree.append(self.sequence1.structure)
+        # seq_to_tree.append(self.sequence2.structure)
+        # string_of_sequences = '\n'.join(seq_to_tree)
 
-        tree_distance = rna_distance(string_of_sequences)
-        tree_distance = tree_distance.strip('\n').split('\n')  # take off last lr
+        # tree_distance = rna_distance(string_of_sequences)
+        # tree_distance = tree_distance.strip('\n').split('\n')  # take off last lr
+        #
+        #
+        # assert len(tree_distance) == 1, (
+        #     'Error length of tree distance %s does not match length of seq_pairs '
+        #     '%s and should -- check installation of RNAdistance'
+        #     % (len(tree_distance), 1)
+        # )
+        #
+        #
+        # self.tree_distance = tree_distance[0].split(' ')[1]
 
-        assert len(tree_distance) == 1, (
-            'Error length of tree distance %s does not match length of seq_pairs '
-            '%s and should -- check installation of RNAdistance'
-            % (len(tree_distance), 1)
-        )
+        test_tree_distance = RNA.tree_edit_distance(
+                RNA.make_tree(RNA.expand_Full(self.sequence1.structure)),
+                RNA.make_tree(RNA.expand_Full(self.sequence2.structure))
+                                                )
 
-        self.tree_distance = tree_distance[0].split(' ')[1]
+        self.tree_distance = test_tree_distance
+        # assert float(self.tree_distance) == test_tree_distance, (
+        #     'Python computed tree distance did not agree. {} vs {}'.format(self.tree_distance, test_tree_distance)
+        # )
 
     def output(self, xgmml, args):
         # if the xgmml data structure does not have this node, add it
@@ -270,6 +284,7 @@ def run_mfold(seq, args):
 
 
 def rna_distance(structures):
+
     cmd = ['RNAdistance']
     sffproc = subprocess.Popen(
         cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
@@ -529,11 +544,10 @@ def find_edges_no_seed(rna_seq_objs, xgmml_obj, args, stats):
     pool = Pool()
 
     seq_pairs = (p for p in itertools.combinations(rna_seq_objs, 2))
-    pdb.set_trace()
     pairs = pool.starmap(RNASequencePair, seq_pairs)
     for pair in pairs:
         pair.output(xgmml_obj, args)
-        append_pair_stats(stats,pair)
+        append_pair_stats(stats, pair)
 
 
 def make_aptamer_stats():

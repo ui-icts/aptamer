@@ -71,11 +71,8 @@ do_install() {
   
   # virtualenv --relocatable $pkg_prefix
   
-  mkdir -p ${pkg_prefix}/scripts
-  cp -a src/aptamer_functions.py ${pkg_prefix}/scripts
-  cp -a src/create_graph.py ${pkg_prefix}/scripts
-  cp -a src/find_families.py ${pkg_prefix}/scripts
-  cp -a src/predict_structures.py ${pkg_prefix}/scripts
+  mkdir -p ${pkg_prefix}/lib
+  cp -aR aptamer ${pkg_prefix}/lib
 
   cat << DO_SCRIPT > ${pkg_prefix}/bin/python-wrapper
 #!/bin/sh
@@ -88,6 +85,7 @@ do_install() {
 
 export LD_LIBRARY_PATH=$(pkg_path_for core/gcc-libs)/lib:$(pkg_path_for core/gcc)/lib
 export PATH=$(pkg_path_for chrisortman/ViennaRNA)/bin:$(pkg_path_for chrisortman/mfold)/bin\$PATH
+export PYTHONPATH=$(pkg_path_for chrisortman/ViennaRNA)/lib/python3.7/site-packages
 ${pkg_prefix}/bin/python -u "\$@"
 DO_SCRIPT
 
@@ -113,6 +111,19 @@ do_end() {
   return 0
 }
 
+do_after() {
+  if [[ $HAB_CREATE_PACKAGE == 'false' ]]; then
+    build_line "WARN: Skipping artifact creation because 'HAB_CREATE_PACKAGE=false'"
+
+    _generate_artifact() {
+      return 0
+    }
+
+    _prepare_build_outputs() {
+      return 0
+    }
+  fi
+}
 _tar_pipe_app_cp_to() {
   local dst_path tar
   dst_path="$1"
