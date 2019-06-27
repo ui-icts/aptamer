@@ -13,7 +13,6 @@ from __future__ import print_function
 from helpers.functions import *
 import time
 
-
 def main():
     start_time = time.strftime('%Y-%m-%d %I:%M:%S%p').lower()
     args = parse_arguments()
@@ -22,7 +21,6 @@ def main():
     in_fh = open(in_fname, 'r')
     stats = make_aptamer_stats()
     rna_seq_objs = []  # list of RNASequence objects (graph vertices)
-
     process_struct_fasta(in_fh, args, cluster_size_re, rna_seq_objs)
     xgmml_obj = XGMML(in_fname)
 

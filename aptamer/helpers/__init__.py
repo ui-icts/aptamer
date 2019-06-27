@@ -1,5 +1,8 @@
 import sys
 
 __all__ = [
-        'functions'
-        ]
+        'functions',
+        'rna_sequence',
+        'rna_sequnce_pair',
+        'fasta_struct_file'
+       ]

@@ -33,127 +33,9 @@ import pdb
 import RNA
 import concurrent.futures
 from multiprocessing import Pool
-
-class RNASequence(object):
-    """Graph node."""
-    def __init__(self, name, cluster_size, seq):
-        self.name = name  # integer ID
-        self.cluster_size = int(cluster_size)
-        self.sequence = seq
-        self.structure = None
-        self.free_energy = None
-        self.energy_dict = {}
-        self.ensemble_free_energy = None
-        self.ensemble_probability = None
-        self.ensemble_diversity = None
-        self.use_for_comparison = True  # used only with seed option
-
-    def output(self):
-        print(">%s  " % (self.name))
-        print(self.sequence)
-        print(self.structure)
-
-    def __str__(self):
-        return '\n'.join(
-            ['%s : %s' % (z, self.__dict__[z]) for z in self.__dict__]
-        )
-
-
-class RNASequencePair(object):
-    """Graph edge. Pair of RNASequence objects."""
-    def __init__(self, seq1, seq2):
-        self.sequence1 = seq1
-        self.sequence2 = seq2
-        self.energy_delta = None
-        self.edit_distance = None
-        self.tree_distance = None
-        self.is_valid_edge = False  # used only with seed option
-
-        self.update_energy_delta()
-        self.update_edit_distance()
-        self.update_tree_distance()
-
-    def __str__(self):
-        return '%s\n---\n%s' % (str(self.sequence1), str(self.sequence2))
-
-    def update_energy_delta(self):
-        self.energy_delta = abs(
-                float(self.sequence1.free_energy) - float(self.sequence2.free_energy)
-                )
-    
-    def update_edit_distance(self):
-        self.edit_distance = Levenshtein.distance(
-                self.sequence1.sequence,
-                self.sequence2.sequence
-                                                )
-
-    def update_tree_distance(self):
-        # seq_to_tree = []
-        # seq_to_tree.append(self.sequence1.structure)
-        # seq_to_tree.append(self.sequence2.structure)
-        # string_of_sequences = '\n'.join(seq_to_tree)
-
-        # tree_distance = rna_distance(string_of_sequences)
-        # tree_distance = tree_distance.strip('\n').split('\n')  # take off last lr
-        #
-        #
-        # assert len(tree_distance) == 1, (
-        #     'Error length of tree distance %s does not match length of seq_pairs '
-        #     '%s and should -- check installation of RNAdistance'
-        #     % (len(tree_distance), 1)
-        # )
-        #
-        #
-        # self.tree_distance = tree_distance[0].split(' ')[1]
-
-        test_tree_distance = RNA.tree_edit_distance(
-                RNA.make_tree(RNA.expand_Full(self.sequence1.structure)),
-                RNA.make_tree(RNA.expand_Full(self.sequence2.structure))
-                                                )
-
-        self.tree_distance = test_tree_distance
-        # assert float(self.tree_distance) == test_tree_distance, (
-        #     'Python computed tree distance did not agree. {} vs {}'.format(self.tree_distance, test_tree_distance)
-        # )
-
-    def output(self, xgmml, args):
-        # if the xgmml data structure does not have this node, add it
-        if self.sequence1.name not in xgmml.nodes:  
-            xgmml.nodes[self.sequence1.name] = self.sequence1
-        if self.sequence2.name not in xgmml.nodes:
-            xgmml.nodes[self.sequence2.name] = self.sequence2
-
-        # make edge between nodes that are similar enough
-        # in terms of edit or tree distance
-        interaction = []
-        if args.edge_type in ['edit', 'both']:
-            if (
-                self.edit_distance and
-                (int(self.edit_distance) <= args.max_edit_dist)
-            ):
-                interaction.append('edit distance')
-                self.is_valid_edge = True
-        if args.edge_type in ['tree', 'both']:
-            if (
-                self.tree_distance and
-                (int(self.tree_distance) <= args.max_tree_dist)
-            ):
-                interaction.append('tree distance')
-                self.is_valid_edge = True
-
-        if not self.is_valid_edge:
-            return
-        if len(interaction) > 1:
-            interaction = 'both'
-        else:
-            interaction = interaction[0]
-
-        xgmml.edges.append([
-            self.sequence1.name, self.sequence2.name,
-            ('string', 'interaction', 'interaction', interaction),
-            ('integer', 'editDistance', 'edit distance', self.edit_distance),
-            ('integer', 'treeDistance', 'tree distance', self.tree_distance)
-        ])
+from helpers.fasta_struct_file import FastaStructFile
+from helpers.rna_sequence import RNASequence
+from helpers.rna_sequence_pair import RNASequencePair
 
 
 class XGMML(object):
@@ -444,45 +326,23 @@ def process_struct_fasta(in_fh, args, cluster_size_re, rna_seq_objs):
     """Process non-fasta input file. Populate RNASequence
     (graph vertex) objects.
     """
-    while True:
-        try:
-            # need to move through a triplet file structure, not fasta
-            header, sequence, structure = list(
-                itertools.islice(in_fh, 3)
-            )
-        except ValueError:  # end of file
-            break
-        sequence = sequence.strip('\n\r')
-        structure = structure.strip('\n\r')
+    struct_file = FastaStructFile(in_fh)
 
-        if not structure.count('(') == structure.count(')'):
-            continue
-
-        if args.calc_structures:
-            sequence = '%s%s%s'.replace('T', 'U') % (
-                args.prefix, sequence, args.suffix
-            )
-        else:
-            sequence = sequence.replace('T', 'U')
-
-        try:
-            cluster_size = cluster_size_re.search(header)
-            cluster_size = cluster_size.group(1)
-        except AttributeError:
-            print('Not able to find cluster size. Setting to 1.')
-
-        if cluster_size is None:
-            cluster_size = 1
-
-        header = header.replace('>', '').strip()
-        curr_seq = RNASequence(header, cluster_size, sequence)
-        curr_seq.free_energy = 1
-        curr_seq.ensemble_free_energy = 1
-        curr_seq.ensemble_probability = 1
-        curr_seq.ensemble_diversity = 1
-        curr_seq.structure = structure
-
+    objs = []
+    if args.calc_structures:
+        objs = struct_file.rna_seq_objs(
+                True,
+                args.prefix,
+                args.suffix
+                                    )
+    else:
+        objs = struct_file.rna_seq_objs(
+                False, None, None
+                                        )
+    for curr_seq in objs:
         rna_seq_objs.append(curr_seq)
+
+    print("Found {} objs".format(len(rna_seq_objs)))
 
 
 def find_edges_seed(rna_seq_objs, xgmml_obj, args, stats):
