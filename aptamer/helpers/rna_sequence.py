@@ -21,3 +21,5 @@ class RNASequence(object):
         return '\n'.join(
             ['%s : %s' % (z, self.__dict__[z]) for z in self.__dict__]
         )
+
+    __repr__ = __str__

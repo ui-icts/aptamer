@@ -265,7 +265,8 @@ def process_fasta(in_fh, args, cluster_size_re, rna_seq_objs):
                 cluster_size = cluster_size_re.search(record.description)
                 cluster_size = cluster_size.group(1)
             except AttributeError:
-                print('Not able to find cluster size. Setting to 1.')
+                pass
+                # print('Not able to find cluster size. Setting to 1.')
 
             if cluster_size is None:
                 cluster_size = 1
@@ -327,6 +328,7 @@ def process_struct_fasta(in_fh, args, cluster_size_re, rna_seq_objs):
     (graph vertex) objects.
     """
     struct_file = FastaStructFile(in_fh)
+    # struct_file.write_combinations("combinations.txt")
 
     objs = []
     if args.calc_structures:
@@ -399,13 +401,17 @@ def grouper(n, iterable):
 def find_edges_no_seed(rna_seq_objs, xgmml_obj, args, stats):
     """"Find edges using non-seed algorithm."""
 
+    def callback(pairs):
+        for pair in pairs:
+            pair.output(xgmml_obj, args)
+            append_pair_stats(stats, pair)
+
     pool = Pool()
 
     seq_pairs = (p for p in itertools.combinations(rna_seq_objs, 2))
-    pairs = pool.starmap(RNASequencePair, seq_pairs)
-    for pair in pairs:
-        pair.output(xgmml_obj, args)
-        append_pair_stats(stats, pair)
+    result = pool.starmap_async(RNASequencePair, seq_pairs, 10000, callback )
+    pool.close()
+    pool.join()
 
 
 def make_aptamer_stats():

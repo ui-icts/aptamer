@@ -49,3 +49,13 @@ class FastaStructFile(object):
             curr_seq.structure = structure
 
             yield curr_seq
+
+    def write_combinations(self, output_file_name):
+        objs = self.rna_seq_objs(False,None,None)
+        seq_pairs = (p for p in itertools.combinations(objs, 2))
+
+        with open(output_file_name, 'w') as out:
+            for p1, p2 in seq_pairs:
+                out.write(p1.structure + '\n')
+                out.write(p2.structure + '\n')
+
