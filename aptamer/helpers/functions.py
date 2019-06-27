@@ -401,7 +401,7 @@ def grouper(n, iterable):
 def find_edges_no_seed(rna_seq_objs, xgmml_obj, args, stats):
     """"Find edges using non-seed algorithm."""
 
-    def callback(pairs):
+    def my_callback(pairs):
         for pair in pairs:
             pair.output(xgmml_obj, args)
             append_pair_stats(stats, pair)
@@ -409,7 +409,10 @@ def find_edges_no_seed(rna_seq_objs, xgmml_obj, args, stats):
     pool = Pool()
 
     seq_pairs = (p for p in itertools.combinations(rna_seq_objs, 2))
-    result = pool.starmap_async(RNASequencePair, seq_pairs, 10000, callback )
+    result = pool.starmap_async(
+            RNASequencePair,
+            seq_pairs,
+            callback=my_callback)
     pool.close()
     pool.join()
 

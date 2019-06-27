@@ -35,7 +35,8 @@ class FastaStructFile(object):
                 cluster_size = self.cluster_size_re.search(header)
                 cluster_size = cluster_size.group(1)
             except AttributeError:
-                print('Not able to find cluster size. Setting to 1.')
+                pass
+                #print('Not able to find cluster size. Setting to 1.')
 
             if cluster_size is None:
                 cluster_size = 1

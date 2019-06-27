@@ -25,10 +25,11 @@ def main():
     xgmml_obj = XGMML(in_fname)
 
     # nodes are now populated. find edges.
-    print('Finding edges...')
     if args.seed:
+        print('Finding edges (seed)...')
         find_edges_seed(rna_seq_objs, xgmml_obj, args, stats)
     else:
+        print('Finding edges (no seed)...')
         find_edges_no_seed(rna_seq_objs, xgmml_obj, args, stats)
 
     # output xgmml file

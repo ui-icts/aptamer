@@ -47,17 +47,25 @@ class RNASequencePair(object):
         )
 
         self.tree_distance = tree_distance[0].split(' ')[1]
+        # test_value = self.test_tree_distance()
 
-    def update_tree_distance_in_proc(self):
-        self.tree_distance = RNA.tree_edit_distance(
+        # If the tree_distance is a float then
+        # the graph is an invalid edge
+        # assert self.tree_distance == test_value, 'Tree distance did not match. {} != {}'.format(repr(self.tree_distance),repr(test_value))
+
+
+    def test_tree_distance(self):
+        value = RNA.tree_edit_distance(
                 RNA.make_tree(RNA.expand_Full(self.sequence1.structure)),
                 RNA.make_tree(RNA.expand_Full(self.sequence2.structure))
-                                                )
+                )
+        return str(int(value))
 
     def output(self, xgmml, args):
         # if the xgmml data structure does not have this node, add it
         if self.sequence1.name not in xgmml.nodes:
             xgmml.nodes[self.sequence1.name] = self.sequence1
+
         if self.sequence2.name not in xgmml.nodes:
             xgmml.nodes[self.sequence2.name] = self.sequence2
 
