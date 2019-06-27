@@ -14,7 +14,7 @@ class RNASequencePair(object):
 
         self.update_energy_delta()
         self.update_edit_distance()
-        self.update_tree_distance()
+        self.update_tree_distance_new()
 
     def __str__(self):
         return '%s\n---\n%s' % (str(self.sequence1), str(self.sequence2))
@@ -53,6 +53,9 @@ class RNASequencePair(object):
         # the graph is an invalid edge
         # assert self.tree_distance == test_value, 'Tree distance did not match. {} != {}'.format(repr(self.tree_distance),repr(test_value))
 
+
+    def update_tree_distance_new(self):
+        self.tree_distance = self.test_tree_distance()
 
     def test_tree_distance(self):
         value = RNA.tree_edit_distance(
