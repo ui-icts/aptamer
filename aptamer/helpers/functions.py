@@ -342,8 +342,6 @@ def process_struct_fasta(in_fh, args, cluster_size_re, rna_seq_objs):
     for curr_seq in objs:
         rna_seq_objs.append(curr_seq)
 
-    print("Found {} objs".format(len(rna_seq_objs)))
-
 
 def find_edges_seed(rna_seq_objs, xgmml_obj, args, stats):
     """Find graph edges using seed algorithm."""

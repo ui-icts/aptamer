@@ -1,6 +1,6 @@
 import RNA
 import Levenshtein
-
+from helpers import functions
 
 class RNASequencePair(object):
     """Graph edge. Pair of RNASequence objects."""
@@ -32,12 +32,27 @@ class RNASequencePair(object):
 
     def update_tree_distance(self):
 
-        test_tree_distance = RNA.tree_edit_distance(
+        seq_to_tree = []
+        seq_to_tree.append(self.sequence1.structure)
+        seq_to_tree.append(self.sequence2.structure)
+        string_of_sequences = '\n'.join(seq_to_tree)
+
+        tree_distance = functions.rna_distance(string_of_sequences)
+        # take off last lr
+        tree_distance = tree_distance.strip('\n').split('\n')
+        assert len(tree_distance) == 1, (
+            'Error length of tree distance %s does not match length of seq_pairs '
+            '%s and should -- check installation of RNAdistance'
+            % (len(tree_distance), 1)
+        )
+
+        self.tree_distance = tree_distance[0].split(' ')[1]
+
+    def update_tree_distance_in_proc(self):
+        self.tree_distance = RNA.tree_edit_distance(
                 RNA.make_tree(RNA.expand_Full(self.sequence1.structure)),
                 RNA.make_tree(RNA.expand_Full(self.sequence2.structure))
                                                 )
-
-        self.tree_distance = test_tree_distance
 
     def output(self, xgmml, args):
         # if the xgmml data structure does not have this node, add it
