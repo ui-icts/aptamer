@@ -7,25 +7,33 @@ from helpers.rna_sequence import RNASequence
 
 class FastaFile(object):
 
-    def __init__(self, in_fh, args, cluster_size_re):
+    def __init__(self, in_fh):
         self.in_fh = in_fh
-        self.args = args
-        self.cluster_size_re = cluster_size_re
+        self.cluster_size_re = re.compile('SIZE=(\d+)')
+        self.prefix = ''
+        self.suffix = ''
+        self.run_mfold = False
+        self.pass_options = ''
+        self.vienna_version = 2
 
-    def process_fasta(self, rna_seq_objs):
+    def rna_seq_objs(self):
         """Process input file as fasta. Populate RNASequence (graph vertex)
         objects.
         """
 
         in_fh = self.in_fh
-        args = self.args
         cluster_size_re = self.cluster_size_re
+        prefix = self.prefix
+        suffix = self.suffix
+        run_mfold = self.run_mfold
+        pass_options = self.pass_options
+        vienna_version = self.vienna_version
 
         folds = []
         with concurrent.futures.ThreadPoolExecutor() as executor:
             for record in SeqIO.parse(in_fh, 'fasta'):
                 sequence = '%s%s%s'.replace('T', 'U') % (
-                    args.prefix, str(record.seq), args.suffix
+                    prefix, str(record.seq), suffix
                 )
                 cluster_size = 1
                 try:
@@ -40,15 +48,15 @@ class FastaFile(object):
 
                 # find structure
                 curr_seq = RNASequence(record.id, cluster_size, sequence)
-                if args.run_mfold:
-                    mfold_f = executor.submit(run_mfold, sequence, args)
+                if run_mfold:
+                    mfold_f = executor.submit(run_mfold_prg, sequence, pass_options)
                     folds.append(mfold_f)
                 else:
-                    rnafold_f = executor.submit(run_rnafold, sequence, args)
+                    rnafold_f = executor.submit(run_rnafold, sequence, vienna_version, pass_options)
                     folds.append(rnafold_f)
 
         for folded_output in folds:
-            if args.run_mfold:
+            if run_mfold:
                 curr_seq.structure, curr_seq.energy_dict = folded_output.result()
                 curr_seq.free_energy = curr_seq.energy_dict['dG']
             else:
@@ -87,19 +95,20 @@ class FastaFile(object):
                         'RNAfold options.'
                     )
                     sys.exit(1)
-            rna_seq_objs.append(curr_seq)
+
+            (yield curr_seq)
 
 
-def run_rnafold(seq, args):
+def run_rnafold(seq, vienna_version, pass_options):
     print('##################')
     print('Running RNAFold...')
     print('##################')
     cmd = None
-    if args.pass_options is not None:
-        cmd = ['RNAfold %s' % args.pass_options]
-    elif args.vienna_version == 1:
+    if pass_options is not None:
+        cmd = ['RNAfold %s' % pass_options]
+    elif vienna_version == 1:
         cmd = ['RNAfold -p -T 30 -noLP -noPS -noGU']
-    elif args.vienna_version == 2:
+    elif vienna_version == 2:
         cmd = ['RNAfold -p -T 30 --noLP --noPS --noGU']
     sffproc = subprocess.Popen(
         cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
@@ -111,7 +120,7 @@ def run_rnafold(seq, args):
     return stdout_value
 
 
-def run_mfold(seq, args):
+def run_mfold_prg(seq, pass_options):
     print('##################')
     print('Running mfold...')
     print('##################')
@@ -121,8 +130,8 @@ def run_mfold(seq, args):
     temp_filename = 'mfold_temp.txt'
     with open(temp_filename, 'w') as f:
         f.write('%s\n' % seq)
-    if args.pass_options is not None:
-        cmd_string = 'mfold SEQ=%s %s' % (temp_filename, args.pass_options)
+    if pass_options is not None:
+        cmd_string = 'mfold SEQ=%s %s' % (temp_filename, pass_options)
     else:
         cmd_string = 'mfold SEQ=%s T=30' % temp_filename
     ret = subprocess.call(

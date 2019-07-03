@@ -18,7 +18,6 @@ from helpers.fasta_struct_file import FastaStructFile
 def main():
     start_time = time.strftime('%Y-%m-%d %I:%M:%S%p').lower()
     args = parse_arguments()
-    cluster_size_re = re.compile('SIZE=(\d+)')
 
     in_fname = args.input_file
     in_fh = open(in_fname, 'r')
@@ -26,8 +25,15 @@ def main():
 
     stats = make_aptamer_stats()
     rna_seq_objs = []
-    fasta_file = FastaFile(in_fh, args, cluster_size_re)
-    fasta_file.process_fasta(rna_seq_objs)
+    fasta_file = FastaFile(in_fh)
+    fasta_file.prefix = args.prefix
+    fasta_file.suffix = args.suffix
+    fasta_file.run_mfold = args.run_mfold
+    fasta_file.pass_options = args.pass_options
+    fasta_file.vienna_version = args.vienna_version
+
+    for seq in fasta_file.rna_seq_objs():
+        rna_seq_objs.append(seq)
 
     # output fasta with structure line
     if args.output:
@@ -40,12 +46,14 @@ def main():
             out_fasta_f.write(
                 '>%s\n%s\n%s\n' % (node.name, node.sequence, node.structure)
             )
+
     xgmml_obj = XGMML(in_fname)
 
     struct_file = FastaStructFile(in_fh)
     struct_file.calc_structures = True
     struct_file.prefix = args.prefix
     struct_file.suffix = args.suffix
+
     for seq in struct_file.rna_seq_objs():
         rna_seq_objs.append(seq)
 
