@@ -8,8 +8,14 @@ class FastaStructFile(object):
     def __init__(self, in_fh):
         self.in_fh = in_fh
         self.cluster_size_re = re.compile('SIZE=(\d+)')
+        self.calc_structures = False
+        self.prefix = None
+        self.suffix = None
 
-    def rna_seq_objs(self, calc_structures, prefix, suffix):
+    def rna_seq_objs(self):
+        """Process non-fasta input file. Populate RNASequence
+        (graph vertex) objects.
+        """
         while True:
             try:
                 # need to move through a triplet file structure, not fasta
@@ -24,9 +30,9 @@ class FastaStructFile(object):
             if not structure.count('(') == structure.count(')'):
                 continue
 
-            if calc_structures:
+            if self.calc_structures:
                 sequence = '%s%s%s'.replace('T', 'U') % (
-                    prefix, sequence, suffix
+                    self.prefix, sequence, self.suffix
                 )
             else:
                 sequence = sequence.replace('T', 'U')
@@ -53,7 +59,7 @@ class FastaStructFile(object):
 
     def write_combinations(self, output_file_name):
         objs = self.rna_seq_objs(False,None,None)
-        seq_pairs = (p for p in itertools.combinations(objs, 2))
+        seq_pairs = itertools.combinations(objs, 2)
 
         with open(output_file_name, 'w') as out:
             for p1, p2 in seq_pairs:

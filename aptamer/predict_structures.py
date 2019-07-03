@@ -12,30 +12,41 @@ from __future__ import print_function
 from builtins import str
 from helpers.functions import *
 import time
+from helpers.fasta_struct_file import FastaStructFile
 
 
 def main():
     start_time = time.strftime('%Y-%m-%d %I:%M:%S%p').lower()
     args = parse_arguments()
     cluster_size_re = re.compile('SIZE=(\d+)')
+
     in_fname = args.input_file
     in_fh = open(in_fname, 'r')
-    stats = make_aptamer_stats()
-    rna_seq_objs = []  # list of RNASequence objects
 
+
+    stats = make_aptamer_stats()
+    rna_seq_objs = []
     process_fasta(in_fh, args, cluster_size_re, rna_seq_objs)
+
     # output fasta with structure line
     if args.output:
         out_fasta_fname = args.output
     else:
         out_fasta_fname = in_fname + '.struct.fa'
+
     with open(out_fasta_fname, 'w') as out_fasta_f:
         for node in rna_seq_objs:
             out_fasta_f.write(
                 '>%s\n%s\n%s\n' % (node.name, node.sequence, node.structure)
             )
-    process_struct_fasta(in_fh, args, cluster_size_re, rna_seq_objs)
     xgmml_obj = XGMML(in_fname)
+
+    struct_file = FastaStructFile(in_fh)
+    struct_file.calc_structures = True
+    struct_file.prefix = args.prefix
+    struct_file.suffix = args.suffix
+    for seq in struct_file.rna_seq_objs():
+        rna_seq_objs.append(seq)
 
     # nodes are now populated. find edges.
     if args.calculate_stats:

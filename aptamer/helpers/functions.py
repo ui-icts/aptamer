@@ -323,27 +323,6 @@ def process_fasta(in_fh, args, cluster_size_re, rna_seq_objs):
         rna_seq_objs.append(curr_seq)
 
 
-def process_struct_fasta(in_fh, args, cluster_size_re, rna_seq_objs):
-    """Process non-fasta input file. Populate RNASequence
-    (graph vertex) objects.
-    """
-    struct_file = FastaStructFile(in_fh)
-    # struct_file.write_combinations("combinations.txt")
-
-    objs = []
-    if args.calc_structures:
-        objs = struct_file.rna_seq_objs(
-                True,
-                args.prefix,
-                args.suffix
-                                    )
-    else:
-        objs = struct_file.rna_seq_objs(
-                False, None, None
-                                        )
-    for curr_seq in objs:
-        rna_seq_objs.append(curr_seq)
-
 
 def find_edges_seed(rna_seq_objs, xgmml_obj, args, stats):
     """Find graph edges using seed algorithm."""
