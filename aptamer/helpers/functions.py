@@ -34,6 +34,7 @@ import RNA
 import concurrent.futures
 from multiprocessing import Pool
 from helpers.fasta_struct_file import FastaStructFile
+from helpers.fasta_file import FastaFile
 from helpers.rna_sequence import RNASequence
 from helpers.rna_sequence_pair import RNASequencePair
 
@@ -114,55 +115,8 @@ class XGMML(object):
         return self.out_str
 
 
-def run_rnafold(seq, args):
-    print('##################')
-    print('Running RNAFold...')
-    print('##################')
-    cmd = None
-    if args.pass_options is not None:
-        cmd = ['RNAfold %s' % args.pass_options]
-    elif args.vienna_version == 1:
-        cmd = ['RNAfold -p -T 30 -noLP -noPS -noGU']
-    elif args.vienna_version == 2:
-        cmd = ['RNAfold -p -T 30 --noLP --noPS --noGU']
-    sffproc = subprocess.Popen(
-        cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
-        stdin=subprocess.PIPE, close_fds=True, shell=True,
-        encoding='ascii'
-    )
-    print('Command:', cmd[0])
-    stdout_value, stderr_value = sffproc.communicate(seq)
-    return stdout_value
 
 
-def run_mfold(seq, args):
-    print('##################')
-    print('Running mfold...')
-    print('##################')
-    if not os.path.exists('mfold_out'):
-        os.mkdir('mfold_out')
-    os.chdir('mfold_out')
-    temp_filename = 'mfold_temp.txt'
-    with open(temp_filename, 'w') as f:
-        f.write('%s\n' % seq)
-    if args.pass_options is not None:
-        cmd_string = 'mfold SEQ=%s %s' % (temp_filename, args.pass_options)
-    else:
-        cmd_string = 'mfold SEQ=%s T=30' % temp_filename
-    ret = subprocess.call(
-        cmd_string, stderr=subprocess.STDOUT, shell=True
-    )
-    if ret != 0:
-        print(
-            'Error when running mfold. Return code %d. '
-            'See mfold log file for details.' % ret
-        )
-        sys.exit(ret)
-    print()
-    structure = convert_ct_to_bracket_dot('%s.ct' % temp_filename)
-    energy_stats = get_mfold_stats('%s.det' % temp_filename)
-    os.chdir('..')
-    return structure, energy_stats
 
 
 def rna_distance(structures):
@@ -250,78 +204,8 @@ def convert_ct_to_bracket_dot(ct_filename):
 
 
 def process_fasta(in_fh, args, cluster_size_re, rna_seq_objs):
-    """Process input file as fasta. Populate RNASequence (graph vertex)
-    objects.
-    """
-
-    folds = []
-    with concurrent.futures.ThreadPoolExecutor() as executor:
-        for record in SeqIO.parse(in_fh, 'fasta'):
-            sequence = '%s%s%s'.replace('T', 'U') % (
-                args.prefix, str(record.seq), args.suffix
-            )
-            cluster_size = 1
-            try:
-                cluster_size = cluster_size_re.search(record.description)
-                cluster_size = cluster_size.group(1)
-            except AttributeError:
-                pass
-                # print('Not able to find cluster size. Setting to 1.')
-
-            if cluster_size is None:
-                cluster_size = 1
-
-            # find structure
-            curr_seq = RNASequence(record.id, cluster_size, sequence)
-            if args.run_mfold:
-                mfold_f = executor.submit(run_mfold, sequence, args)
-                folds.append(mfold_f)
-            else:
-                rnafold_f = executor.submit(run_rnafold, sequence, args)
-                folds.append(rnafold_f)
-
-    for folded_output in folds:
-        if args.run_mfold:
-            curr_seq.structure, curr_seq.energy_dict = folded_output.result()
-            curr_seq.free_energy = curr_seq.energy_dict['dG']
-        else:
-            rnafold_out = folded_output.result()
-            rnafold_out = rnafold_out.split('\n')
-            try:
-                curr_seq.structure, curr_seq.free_energy = (
-                    rnafold_out[1].split(' (')
-                )
-            except (ValueError, IndexError):
-                print('Error running RNAfold:\n%s\nExiting.' % rnafold_out)
-                sys.exit(1)
-
-            print('%s\n' % rnafold_out)
-            try:
-                curr_seq.free_energy = abs(
-                    float(curr_seq.free_energy.replace(')', ''))
-                )
-                curr_seq.ensemble_free_energy = abs(
-                    float(rnafold_out[2].split('[')[1].replace(']', ''))
-                )
-                curr_seq.ensemble_probability = abs(float(
-                    rnafold_out[4].split(';')[0].replace(
-                        ' frequency of mfe structure in ensemble ', ''
-                    )
-                ))
-                curr_seq.ensemble_diversity = abs(float(
-                    rnafold_out[4].split(';')[1].replace(
-                        ' ensemble diversity ', ''
-                    )
-                ))
-            except IndexError:
-                print(
-                    'Error parsing RNAfold output. '
-                    '(Couldn\'t find statistics.) Please check '
-                    'RNAfold options.'
-                )
-                sys.exit(1)
-        rna_seq_objs.append(curr_seq)
-
+    fasta_file = FastaFile(in_fh, args, cluster_size_re)
+    fasta_file.process_fasta(rna_seq_objs)
 
 
 def find_edges_seed(rna_seq_objs, xgmml_obj, args, stats):
