@@ -58,10 +58,11 @@ class RNASequencePair(object):
         self.tree_distance = self.test_tree_distance()
 
     def test_tree_distance(self):
-        value = RNA.tree_edit_distance(
-                RNA.make_tree(RNA.expand_Full(self.sequence1.structure)),
-                RNA.make_tree(RNA.expand_Full(self.sequence2.structure))
-                )
+        t1 = RNA.make_tree(RNA.expand_Full(self.sequence1.structure))
+        t2 = RNA.make_tree(RNA.expand_Full(self.sequence2.structure))
+        value = RNA.tree_edit_distance(t1, t2)
+        RNA.free_tree(t1)
+        RNA.free_tree(t2)
         return str(int(value))
 
     def output(self, xgmml, args):
