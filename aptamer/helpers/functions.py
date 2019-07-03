@@ -203,11 +203,6 @@ def convert_ct_to_bracket_dot(ct_filename):
     return '%s' % (bracket_dot) if (bracket_dot != '') else None
 
 
-def process_fasta(in_fh, args, cluster_size_re, rna_seq_objs):
-    fasta_file = FastaFile(in_fh, args, cluster_size_re)
-    fasta_file.process_fasta(rna_seq_objs)
-
-
 def find_edges_seed(rna_seq_objs, xgmml_obj, args, stats):
     """Find graph edges using seed algorithm."""
     nodes_copy = rna_seq_objs

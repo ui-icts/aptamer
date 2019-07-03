@@ -26,7 +26,8 @@ def main():
 
     stats = make_aptamer_stats()
     rna_seq_objs = []
-    process_fasta(in_fh, args, cluster_size_re, rna_seq_objs)
+    fasta_file = FastaFile(in_fh, args, cluster_size_re)
+    fasta_file.process_fasta(rna_seq_objs)
 
     # output fasta with structure line
     if args.output:
