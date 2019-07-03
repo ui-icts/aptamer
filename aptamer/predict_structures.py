@@ -23,8 +23,6 @@ def main():
     in_fh = open(in_fname, 'r')
 
 
-    stats = make_aptamer_stats()
-    rna_seq_objs = []
     fasta_file = FastaFile(in_fh)
     fasta_file.prefix = args.prefix
     fasta_file.suffix = args.suffix
@@ -32,8 +30,7 @@ def main():
     fasta_file.pass_options = args.pass_options
     fasta_file.vienna_version = args.vienna_version
 
-    for seq in fasta_file.rna_seq_objs():
-        rna_seq_objs.append(seq)
+    rna_seq_objs = list(fasta_file.rna_seq_objs())
 
     # output fasta with structure line
     if args.output:
@@ -47,19 +44,12 @@ def main():
                 '>%s\n%s\n%s\n' % (node.name, node.sequence, node.structure)
             )
 
-    xgmml_obj = XGMML(in_fname)
-
-    struct_file = FastaStructFile(in_fh)
-    struct_file.calc_structures = True
-    struct_file.prefix = args.prefix
-    struct_file.suffix = args.suffix
-
-    for seq in struct_file.rna_seq_objs():
-        rna_seq_objs.append(seq)
 
     # nodes are now populated. find edges.
     if args.calculate_stats:
         print('Calculating stats...')
+        stats = make_aptamer_stats()
+        xgmml_obj = XGMML(in_fname)
         find_edges_no_seed(rna_seq_objs, xgmml_obj, args, stats)
         print_stats(stats, args)
     else:
