@@ -39,40 +39,40 @@ class FastaFile(object):
         )
         return sequence
 
+    def build_rna_sequence(self, record):
+        sequence = self.get_sequence(record)
+        cluster_size = self.get_cluster_size(record)
+
+        # find structure
+        curr_seq = RNASequence(record.id, cluster_size, sequence)
+
+        if self.run_mfold:
+            curr_seq.structure, curr_seq.energy_dict = run_mfold_prg(sequence,self.pass_options)
+            curr_seq.free_energy = curr_seq.energy_dict['dG']
+        else:
+
+            rnafold_out = run_rnafold(sequence, self.vienna_version, self.pass_options)
+            rnafold_out = RNAFoldOutput(rnafold_out)
+
+            curr_seq.structure = rnafold_out.structure
+            curr_seq.free_energy = rnafold_out.free_energy
+            curr_seq.free_energy = rnafold_out.free_energy
+            curr_seq.ensemble_free_energy = rnafold_out.ensemble_free_energy
+            curr_seq.ensemble_probability = rnafold_out.ensemble_probability
+            curr_seq.ensemble_diversity = rnafold_out.ensemble_diversity
+
+        return curr_seq
+
     def __iter__(self):
         """Process input file as fasta. Populate RNASequence (graph vertex)
         objects.
         """
 
-        in_fh = open(self.input_file_name, 'r')
-        run_mfold = self.run_mfold
-        pass_options = self.pass_options
-        vienna_version = self.vienna_version
+        with open(self.input_file_name, 'r') as in_fh:
+            for record in SeqIO.parse(in_fh, 'fasta'):
+                curr_seq = self.build_rna_sequence(record)
+                (yield curr_seq)
 
-        for record in SeqIO.parse(in_fh, 'fasta'):
-            sequence = self.get_sequence(record)
-            cluster_size = self.get_cluster_size(record)
-
-            # find structure
-            curr_seq = RNASequence(record.id, cluster_size, sequence)
-            if run_mfold:
-                curr_seq.structure, curr_seq.energy_dict = run_mfold_prg(sequence,pass_options)
-                curr_seq.free_energy = curr_seq.energy_dict['dG']
-            else:
-
-                rnafold_out = run_rnafold(sequence, vienna_version, pass_options)
-                rnafold_out = RNAFoldOutput(rnafold_out)
-
-                curr_seq.structure = rnafold_out.structure
-                curr_seq.free_energy = rnafold_out.free_energy
-                curr_seq.free_energy = rnafold_out.free_energy
-                curr_seq.ensemble_free_energy = rnafold_out.ensemble_free_energy
-                curr_seq.ensemble_probability = rnafold_out.ensemble_probability
-                curr_seq.ensemble_diversity = rnafold_out.ensemble_diversity
-
-            (yield curr_seq)
-
-        in_fh.close()
 
 class RNAFoldOutput(object):
 
