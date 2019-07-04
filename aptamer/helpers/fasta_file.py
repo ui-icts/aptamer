@@ -7,8 +7,8 @@ from helpers.rna_sequence import RNASequence
 
 class FastaFile(object):
 
-    def __init__(self, in_fh):
-        self.in_fh = in_fh
+    def __init__(self, input_file_name):
+        self.input_file_name = input_file_name
         self.cluster_size_re = re.compile('SIZE=(\d+)')
         self.prefix = ''
         self.suffix = ''
@@ -16,12 +16,12 @@ class FastaFile(object):
         self.pass_options = ''
         self.vienna_version = 2
 
-    def rna_seq_objs(self):
+    def __iter__(self):
         """Process input file as fasta. Populate RNASequence (graph vertex)
         objects.
         """
 
-        in_fh = self.in_fh
+        in_fh = open(self.input_file_name, 'r')
         cluster_size_re = self.cluster_size_re
         prefix = self.prefix
         suffix = self.suffix
@@ -29,38 +29,29 @@ class FastaFile(object):
         pass_options = self.pass_options
         vienna_version = self.vienna_version
 
-        folds = []
-        with concurrent.futures.ThreadPoolExecutor() as executor:
-            for record in SeqIO.parse(in_fh, 'fasta'):
-                sequence = '%s%s%s'.replace('T', 'U') % (
-                    prefix, str(record.seq), suffix
-                )
+        for record in SeqIO.parse(in_fh, 'fasta'):
+            sequence = '%s%s%s'.replace('T', 'U') % (
+                prefix, str(record.seq), suffix
+            )
+            cluster_size = 1
+            try:
+                cluster_size = cluster_size_re.search(record.description)
+                cluster_size = cluster_size.group(1)
+            except AttributeError:
+                pass
+                # print('Not able to find cluster size. Setting to 1.')
+
+            if cluster_size is None:
                 cluster_size = 1
-                try:
-                    cluster_size = cluster_size_re.search(record.description)
-                    cluster_size = cluster_size.group(1)
-                except AttributeError:
-                    pass
-                    # print('Not able to find cluster size. Setting to 1.')
 
-                if cluster_size is None:
-                    cluster_size = 1
-
-                # find structure
-                curr_seq = RNASequence(record.id, cluster_size, sequence)
-                if run_mfold:
-                    mfold_f = executor.submit(run_mfold_prg, sequence, pass_options)
-                    folds.append(mfold_f)
-                else:
-                    rnafold_f = executor.submit(run_rnafold, sequence, vienna_version, pass_options)
-                    folds.append(rnafold_f)
-
-        for folded_output in folds:
+            # find structure
+            curr_seq = RNASequence(record.id, cluster_size, sequence)
             if run_mfold:
-                curr_seq.structure, curr_seq.energy_dict = folded_output.result()
+                curr_seq.structure, curr_seq.energy_dict = run_mfold_prg(sequence,pass_options)
                 curr_seq.free_energy = curr_seq.energy_dict['dG']
             else:
-                rnafold_out = folded_output.result()
+
+                rnafold_out = run_rnafold(sequence, vienna_version, pass_options)
                 rnafold_out = rnafold_out.split('\n')
                 try:
                     curr_seq.structure, curr_seq.free_energy = (
@@ -98,6 +89,7 @@ class FastaFile(object):
 
             (yield curr_seq)
 
+        in_fh.close()
 
 def run_rnafold(seq, vienna_version, pass_options):
     print('##################')

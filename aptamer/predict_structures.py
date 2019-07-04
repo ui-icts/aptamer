@@ -20,17 +20,15 @@ def main():
     args = parse_arguments()
 
     in_fname = args.input_file
-    in_fh = open(in_fname, 'r')
 
-
-    fasta_file = FastaFile(in_fh)
+    fasta_file = FastaFile(in_fname)
     fasta_file.prefix = args.prefix
     fasta_file.suffix = args.suffix
     fasta_file.run_mfold = args.run_mfold
     fasta_file.pass_options = args.pass_options
     fasta_file.vienna_version = args.vienna_version
 
-    rna_seq_objs = list(fasta_file.rna_seq_objs())
+    rna_seq_objs = list(fasta_file)
 
     # output fasta with structure line
     if args.output:
@@ -62,7 +60,6 @@ def main():
     output_stats_tsv(rna_seq_objs, args)
     output_log(args, start_time)
     print()
-    in_fh.close()
 
 
 def parse_arguments():
