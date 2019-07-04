@@ -1,0 +1,14 @@
+#!/bin/bash
+set +x
+
+INPUT_FILE_ABS=$(python -c "import os; print(os.path.realpath('$1'))")
+shift
+FILE_NAME=$(basename -- "$INPUT_FILE_ABS")
+DATA_DIR=$(dirname -- "$INPUT_FILE_ABS")
+
+pushd "$DATA_DIR"
+
+# PYTHONPATH="../../aptamer:$PYTHONPATH" mprof run --python --include-children python ../../aptamer/create_graph.py $FILE_NAME $@
+python ../../create_graph.py $FILE_NAME $@
+
+popd

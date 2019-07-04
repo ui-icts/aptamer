@@ -1,0 +1,17 @@
+#!/bin/bash
+set +x
+
+INPUT_FILE_ABS=$(python -c "import os; print(os.path.realpath('$1'))")
+shift
+FILE_NAME=$(basename -- "$INPUT_FILE_ABS")
+DATA_NAME="${FILE_NAME%.*}"
+
+echo "Creating data dir $DATA_NAME"
+mkdir -p "data/$DATA_NAME"
+pushd "data/$DATA_NAME"
+
+cp $INPUT_FILE_ABS ./$FILE_NAME
+
+python ../../predict_structures.py $FILE_NAME $@
+
+popd
