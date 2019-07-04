@@ -28,7 +28,7 @@ def main():
     fasta_file.pass_options = args.pass_options
     fasta_file.vienna_version = args.vienna_version
 
-    rna_seq_objs = list(fasta_file)
+    # rna_seq_objs = fasta_file
 
     # output fasta with structure line
     if args.output:
@@ -36,11 +36,13 @@ def main():
     else:
         out_fasta_fname = in_fname + '.struct.fa'
 
+    rna_seq_objs = []
     with open(out_fasta_fname, 'w') as out_fasta_f:
-        for node in rna_seq_objs:
+        for node in fasta_file:
             out_fasta_f.write(
                 '>%s\n%s\n%s\n' % (node.name, node.sequence, node.structure)
             )
+            rna_seq_objs.append(node)
 
 
     # nodes are now populated. find edges.

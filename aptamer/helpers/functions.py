@@ -231,6 +231,7 @@ def find_edges_no_seed(rna_seq_objs, xgmml_obj, args, stats):
             RNASequencePair,
             seq_pairs,
             callback=my_callback)
+
     pool.close()
     pool.join()
 
