@@ -2,6 +2,7 @@ import re
 import itertools
 import subprocess
 import concurrent.futures
+from multiprocessing import Pool
 from Bio import SeqIO
 from helpers.rna_sequence import RNASequence
 
@@ -25,6 +26,13 @@ class FastaFile(object):
             for record in SeqIO.parse(in_fh, 'fasta'):
                 seq = self.build_rna_sequence(record)
                 (yield seq)
+
+
+    def p_seq_objs(self):
+        pool = Pool()
+        with open(self.input_file_name, 'r') as in_fh:
+            records = SeqIO.parse(in_fh, 'fasta')
+            return pool.map(self.build_rna_sequence, records)
 
 
     def get_cluster_size(self, record):

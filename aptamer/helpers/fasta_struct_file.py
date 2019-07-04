@@ -55,7 +55,7 @@ class FastaStructFile(object):
             curr_seq.ensemble_diversity = 1
             curr_seq.structure = structure
 
-            yield curr_seq
+            (yield curr_seq)
 
     def write_combinations(self, output_file_name):
         objs = self.rna_seq_objs(False,None,None)

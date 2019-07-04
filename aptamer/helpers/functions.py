@@ -227,6 +227,7 @@ def find_edges_no_seed(rna_seq_objs, xgmml_obj, args, stats):
     pool = Pool()
 
     seq_pairs = itertools.combinations(rna_seq_objs, 2)
+
     result = pool.starmap_async(
             RNASequencePair,
             seq_pairs,

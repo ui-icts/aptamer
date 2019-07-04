@@ -38,7 +38,7 @@ def main():
 
     rna_seq_objs = []
     with open(out_fasta_fname, 'w') as out_fasta_f:
-        for node in fasta_file:
+        for node in fasta_file.p_seq_objs():
             out_fasta_f.write(
                 '>%s\n%s\n%s\n' % (node.name, node.sequence, node.structure)
             )
