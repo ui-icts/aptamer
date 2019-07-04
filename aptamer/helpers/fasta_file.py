@@ -16,6 +16,17 @@ class FastaFile(object):
         self.pass_options = ''
         self.vienna_version = 2
 
+    def __iter__(self):
+        """Process input file as fasta. Populate RNASequence (graph vertex)
+        objects.
+        """
+
+        with open(self.input_file_name, 'r') as in_fh:
+            for record in SeqIO.parse(in_fh, 'fasta'):
+                seq = self.build_rna_sequence(record)
+                (yield seq)
+
+
     def get_cluster_size(self, record):
         cluster_size_re = self.cluster_size_re
         cluster_size = 1
@@ -46,33 +57,16 @@ class FastaFile(object):
         # find structure
         curr_seq = RNASequence(record.id, cluster_size, sequence)
 
-        if self.run_mfold:
-            curr_seq.structure, curr_seq.energy_dict = run_mfold_prg(sequence,self.pass_options)
-            curr_seq.free_energy = curr_seq.energy_dict['dG']
-        else:
-
-            rnafold_out = run_rnafold(sequence, self.vienna_version, self.pass_options)
-            rnafold_out = RNAFoldOutput(rnafold_out)
-
-            curr_seq.structure = rnafold_out.structure
-            curr_seq.free_energy = rnafold_out.free_energy
-            curr_seq.free_energy = rnafold_out.free_energy
-            curr_seq.ensemble_free_energy = rnafold_out.ensemble_free_energy
-            curr_seq.ensemble_probability = rnafold_out.ensemble_probability
-            curr_seq.ensemble_diversity = rnafold_out.ensemble_diversity
+        fold_output = self.mfold(sequence) if self.run_mfold else self.rnafold(sequence)
+        fold_output.update(curr_seq)
 
         return curr_seq
 
-    def __iter__(self):
-        """Process input file as fasta. Populate RNASequence (graph vertex)
-        objects.
-        """
+    def rnafold(self, sequence):
+        return run_rnafold(sequence, self.vienna_version, self.pass_options)
 
-        with open(self.input_file_name, 'r') as in_fh:
-            for record in SeqIO.parse(in_fh, 'fasta'):
-                curr_seq = self.build_rna_sequence(record)
-                (yield curr_seq)
-
+    def mfold(self, sequence):
+        return run_mfold_prg(sequence,self.pass_options)
 
 class RNAFoldOutput(object):
 
@@ -111,7 +105,14 @@ class RNAFoldOutput(object):
                 'RNAfold options.'
             )
             sys.exit(1)
-        pass
+
+    def update(self, rna_sequence):
+        rna_sequence.structure = self.structure
+        rna_sequence.free_energy = self.free_energy
+        rna_sequence.free_energy = self.free_energy
+        rna_sequence.ensemble_free_energy = self.ensemble_free_energy
+        rna_sequence.ensemble_probability = self.ensemble_probability
+        rna_sequence.ensemble_diversity = self.ensemble_diversity
 
 def run_rnafold(seq, vienna_version, pass_options):
     print('##################')
@@ -131,7 +132,18 @@ def run_rnafold(seq, vienna_version, pass_options):
     )
     print('Command:', cmd[0])
     stdout_value, stderr_value = sffproc.communicate(seq)
-    return stdout_value
+    return RNAFoldOutput(stdout_value)
+
+
+class MFoldOutput(object):
+    def __init__(self, mfold_out):
+        self.structure, self.energy_dict = mfold_out
+        self.free_energy = curr_seq.energy_dict['dG']
+
+    def update(self, rna_sequence):
+        rna_sequence.structure = self.structure
+        rna_sequence.energy_dict = self.energy_dict
+        rna_sequence.free_energy = self.energy_dict['dG']
 
 
 def run_mfold_prg(seq, pass_options):
@@ -144,13 +156,16 @@ def run_mfold_prg(seq, pass_options):
     temp_filename = 'mfold_temp.txt'
     with open(temp_filename, 'w') as f:
         f.write('%s\n' % seq)
+
     if pass_options is not None:
         cmd_string = 'mfold SEQ=%s %s' % (temp_filename, pass_options)
     else:
         cmd_string = 'mfold SEQ=%s T=30' % temp_filename
+
     ret = subprocess.call(
         cmd_string, stderr=subprocess.STDOUT, shell=True
     )
+
     if ret != 0:
         print(
             'Error when running mfold. Return code %d. '
@@ -161,4 +176,49 @@ def run_mfold_prg(seq, pass_options):
     structure = convert_ct_to_bracket_dot('%s.ct' % temp_filename)
     energy_stats = get_mfold_stats('%s.det' % temp_filename)
     os.chdir('..')
-    return structure, energy_stats
+
+    return MFoldOutput((structure, energy_stats))
+
+
+def convert_ct_to_bracket_dot(ct_filename):
+    bracket_dot = ''
+    with open(ct_filename, 'r') as f:
+        for row in f:
+            row = row.split()
+            # used to grab energy but not needed except to skip first line
+            if '=' in row and len(row) < 6:  # first row
+                pass
+            elif row[4] == '0':
+                bracket_dot += '.'
+            elif int(row[0]) < int(row[4]):
+                bracket_dot += '('
+            elif int(row[0]) > int(row[4]):
+                bracket_dot += ')'
+    return '%s' % (bracket_dot) if (bracket_dot != '') else None
+
+
+def get_mfold_stats(det_filename):
+    # fixed values within line
+    valid_pattern = {
+        0: 'dG', 1: '=', 3: 'dH', 4: '=', 6: 'dS', 7: '=', 9: 'Tm', 10: '='
+    }
+    energy_stats = {}
+    for key, value in valid_pattern.items():
+        if value != '=':
+            energy_stats[value] = None
+    with open(det_filename, 'r') as f:
+        for i, row in enumerate(f):
+            if i == 5: #6th line
+                row = row.split()
+                test_pattern = [
+                    row[z] ==  valid_pattern[z] for z in valid_pattern
+                ]
+                assert False not in test_pattern, (
+                    'mfold file *.txt.det does not match the expected format'
+                )
+                for x in valid_pattern:
+                    if row[x] != '=':
+                        energy_stats[row[x]] = row[x + 2] 
+    return energy_stats
+
+

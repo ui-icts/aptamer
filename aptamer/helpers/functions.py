@@ -161,46 +161,6 @@ def process_seq_pairs(seq_pairs, args):
         x.tree_distance = tree_distance[i]
 
 
-def get_mfold_stats(det_filename):
-    # fixed values within line
-    valid_pattern = {
-        0: 'dG', 1: '=', 3: 'dH', 4: '=', 6: 'dS', 7: '=', 9: 'Tm', 10: '='
-    }
-    energy_stats = {}
-    for key, value in valid_pattern.items():
-        if value != '=':
-            energy_stats[value] = None
-    with open(det_filename, 'r') as f:
-        for i, row in enumerate(f):
-            if i == 5: #6th line
-                row = row.split()
-                test_pattern = [
-                    row[z] ==  valid_pattern[z] for z in valid_pattern
-                ]
-                assert False not in test_pattern, (
-                    'mfold file *.txt.det does not match the expected format'
-                )
-                for x in valid_pattern:
-                    if row[x] != '=':
-                        energy_stats[row[x]] = row[x + 2] 
-    return energy_stats
-
-
-def convert_ct_to_bracket_dot(ct_filename):
-    bracket_dot = ''
-    with open(ct_filename, 'r') as f:
-        for row in f:
-            row = row.split()
-            # used to grab energy but not needed except to skip first line
-            if '=' in row and len(row) < 6:  # first row
-                pass
-            elif row[4] == '0':
-                bracket_dot += '.'
-            elif int(row[0]) < int(row[4]):
-                bracket_dot += '('
-            elif int(row[0]) > int(row[4]):
-                bracket_dot += ')'
-    return '%s' % (bracket_dot) if (bracket_dot != '') else None
 
 
 def find_edges_seed(rna_seq_objs, xgmml_obj, args, stats):
