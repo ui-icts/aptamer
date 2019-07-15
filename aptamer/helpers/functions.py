@@ -237,6 +237,34 @@ def find_edges_no_seed(rna_seq_objs, xgmml_obj, args, stats):
     pool.join()
 
 
+def grouper(iterable, n, fillvalue=None):
+    args = [iter(iterable)] * n
+    return itertools.zip_longest(*args, fillvalue=fillvalue)
+
+def find_edges_no_seed_p(rna_seq_objs, xgmml_obj, args, stats):
+    def my_callback(pairs):
+        for pair in pairs:
+            pair.output(xgmml_obj, args)
+            append_pair_stats(stats, pair)
+
+    pool = Pool()
+
+    seq_pairs = itertools.combinations(rna_seq_objs, 2)
+    batches = ('\n'.join(pair_batch) for pair_batch in grouper(seq_pairs,500,fillvalue=''))
+
+    batch_results = pool.map(
+            rna_distance,
+            batches)
+    
+    pool.close()
+    pool.join()
+
+    seq_pairs = itertools.combinations(rna_seq_objs, 2)
+    results = itertools.chain.from_iterable(batch_results)
+    pairs = (RNASequencePair(seq1,seq2,dist) for (seq1,seq2),dist in itertools.zip_longest(seq_pairs, results))
+    my_callback(pairs)
+
+
 def make_aptamer_stats():
     return {'energy_delta': [], 'edit_distance': [], 'tree_distance': []}
 
