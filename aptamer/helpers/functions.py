@@ -173,7 +173,7 @@ def find_edges_seed(rna_seq_objs, xgmml_obj, args, stats):
          # then remove matches and start again till gone
         for x in range(1, len(nodes_copy)):
             # new nodes_copy[0] each time a node is deleted
-            pair = RNASequencePair( nodes_copy[0], nodes_copy[x])
+            pair = RNASequencePair( nodes_copy[0], nodes_copy[x], None)
             pair.energy_delta = abs(
                 pair.sequence1.free_energy - pair.sequence2.free_energy
             )
@@ -202,7 +202,7 @@ def pairwise_combine(rna_seq_objs):
     for i in range(0, len(rna_seq_objs)):
         for j in range(i + 1, len(rna_seq_objs)):
             pair = RNASequencePair(
-                    rna_seq_objs[i], rna_seq_objs[j]
+                    rna_seq_objs[i], rna_seq_objs[j], None
                     )
             yield pair
 
@@ -229,7 +229,7 @@ def find_edges_no_seed(rna_seq_objs, xgmml_obj, args, stats):
     seq_pairs = itertools.combinations(rna_seq_objs, 2)
 
     result = pool.starmap_async(
-            RNASequencePair,
+            RNASequencePair.build,
             seq_pairs,
             callback=my_callback)
 

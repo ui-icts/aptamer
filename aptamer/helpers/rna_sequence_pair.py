@@ -3,18 +3,23 @@ import Levenshtein
 from helpers import functions
 
 class RNASequencePair(object):
+
+    def build(seq1, seq2):
+        td = compute_tree_distance(seq1, seq2)
+        return RNASequencePair(seq1,seq2,td)
+
     """Graph edge. Pair of RNASequence objects."""
-    def __init__(self, seq1, seq2):
-        self.sequence1 = seq1
-        self.sequence2 = seq2
+    def __init__(self, seq1, seq2, tree_distance):
         self.energy_delta = None
         self.edit_distance = None
-        self.tree_distance = None
         self.is_valid_edge = False  # used only with seed option
+
+        self.sequence1 = seq1
+        self.sequence2 = seq2
+        self.tree_distance = tree_distance
 
         self.update_energy_delta()
         self.update_edit_distance()
-        self.update_tree_distance_new()
 
     def __str__(self):
         return '%s\n---\n%s' % (str(self.sequence1), str(self.sequence2))
@@ -54,12 +59,10 @@ class RNASequencePair(object):
         # assert self.tree_distance == test_value, 'Tree distance did not match. {} != {}'.format(repr(self.tree_distance),repr(test_value))
 
 
-    def update_tree_distance_new(self):
-        self.tree_distance = self.test_tree_distance()
 
-    def test_tree_distance(self):
-        t1 = RNA.make_tree(RNA.expand_Full(self.sequence1.structure))
-        t2 = RNA.make_tree(RNA.expand_Full(self.sequence2.structure))
+    def compute_tree_distance(sequence1, sequence2):
+        t1 = RNA.make_tree(RNA.expand_Full(sequence1.structure))
+        t2 = RNA.make_tree(RNA.expand_Full(sequence2.structure))
         value = RNA.tree_edit_distance(t1, t2)
         RNA.free_tree(t1)
         RNA.free_tree(t2)
