@@ -207,14 +207,6 @@ def pairwise_combine(rna_seq_objs):
             yield pair
 
 
-def grouper(n, iterable):
-    """
-    >>> list(grouper(3, 'ABCDEFG'))
-    [['A', 'B', 'C'], ['D', 'E', 'F'], ['G']]
-    """
-    iterable = iter(iterable)
-    return iter(lambda: list(itertools.islice(iterable, n)), [])
-
 
 def find_edges_no_seed(rna_seq_objs, xgmml_obj, args, stats):
     """"Find edges using non-seed algorithm."""
@@ -241,6 +233,7 @@ def grouper(iterable, n, fillvalue=None):
     args = [iter(iterable)] * n
     return itertools.zip_longest(*args, fillvalue=fillvalue)
 
+
 def find_edges_no_seed_p(rna_seq_objs, xgmml_obj, args, stats):
     def my_callback(pairs):
         for pair in pairs:
@@ -250,18 +243,18 @@ def find_edges_no_seed_p(rna_seq_objs, xgmml_obj, args, stats):
     pool = Pool()
 
     seq_pairs = itertools.combinations(rna_seq_objs, 2)
-    batches = ('\n'.join(pair_batch) for pair_batch in grouper(seq_pairs,500,fillvalue=''))
+    batches = ('\n'.join(pair_batch) for pair_batch in grouper(seq_pairs, 500, fillvalue=''))
 
     batch_results = pool.map(
             rna_distance,
             batches)
-    
+
     pool.close()
     pool.join()
 
     seq_pairs = itertools.combinations(rna_seq_objs, 2)
     results = itertools.chain.from_iterable(batch_results)
-    pairs = (RNASequencePair(seq1,seq2,dist) for (seq1,seq2),dist in itertools.zip_longest(seq_pairs, results))
+    pairs = (RNASequencePair(seq1, seq2, dist) for (seq1, seq2), dist in itertools.zip_longest(seq_pairs, results))
     my_callback(pairs)
 
 
