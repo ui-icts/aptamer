@@ -58,7 +58,8 @@ class FastaStructFile(object):
             (yield curr_seq)
 
     def write_combinations(self, output_file_name):
-        objs = self.rna_seq_objs(False,None,None)
+        objs = list(self.rna_seq_objs())
+        print("Processing " + str(len(objs)) + " RNA sequence objects")
         seq_pairs = itertools.combinations(objs, 2)
 
         with open(output_file_name, 'w') as out:

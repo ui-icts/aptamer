@@ -19,6 +19,11 @@ def main():
     start_time = time.strftime('%Y-%m-%d %I:%M:%S%p').lower()
     args = parse_arguments()
     in_fname = args.input_file
+
+    if args.save_combinations:
+        with open(in_fname, 'r') as file_handle:
+            FastaStructFile(file_handle).write_combinations("combinations.txt")
+
     in_fh = open(in_fname, 'r')
     struct_file = FastaStructFile(in_fh)
     rna_seq_objs = struct_file.rna_seq_objs()
@@ -102,6 +107,10 @@ def parse_arguments():
     parser.add_argument(
         '--seed', action='store_true', default=False,
         help='Use seed sequence algorithm to find graph edges.'
+    )
+    parser.add_argument(
+        '--save_combinations', action='store_true', default=False,
+        help='Save the combinations used to a file for inspection.'
     )
 
     if len(sys.argv) <= 1:
