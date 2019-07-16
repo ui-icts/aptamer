@@ -8,6 +8,7 @@ pkg_deps=(
   core/gcc-libs
   core/gcc
   core/zlib
+  core/bash
   chrisortman/ViennaRNA
   chrisortman/mfold
 )
@@ -101,6 +102,34 @@ hab pkg exec ${pkg_origin}/${pkg_name} python-wrapper "\$@"
 DO_SCRIPT
 
   chmod +x ${pkg_prefix}/bin/run-aptamer
+
+  cat << DO_SCRIPT > ${pkg_prefix}/bin/predict-structures
+#!$(pkg_path_for core/bash)/bin/bash
+
+export LD_LIBRARY_PATH=$(pkg_path_for core/gcc-libs)/lib:$(pkg_path_for core/gcc)/lib
+export VIRTUAL_ENV=${pkg_prefix}
+export PATH=$(pkg_path_for chrisortman/ViennaRNA)/bin:$(pkg_path_for chrisortman/mfold)/bin:${pkg_prefix}/bin:\$PATH
+export PYTHONPATH=$(pkg_path_for chrisortman/ViennaRNA)/lib/python3.7/site-packages
+
+SCRIPT_FILE=${pkg_prefix}/lib/aptamer/predict_structures.py
+${pkg_prefix}/bin/python -u \$SCRIPT_FILE "\$@"
+DO_SCRIPT
+
+  chmod +x ${pkg_prefix}/bin/predict-structures
+
+  cat << DO_SCRIPT > ${pkg_prefix}/bin/create-graph
+#!$(pkg_path_for core/bash)/bin/bash
+
+export LD_LIBRARY_PATH=$(pkg_path_for core/gcc-libs)/lib:$(pkg_path_for core/gcc)/lib
+export VIRTUAL_ENV=${pkg_prefix}
+export PATH=$(pkg_path_for chrisortman/ViennaRNA)/bin:$(pkg_path_for chrisortman/mfold)/bin:${pkg_prefix}/bin:\$PATH
+export PYTHONPATH=$(pkg_path_for chrisortman/ViennaRNA)/lib/python3.7/site-packages
+
+SCRIPT_FILE=${pkg_prefix}/lib/aptamer/create_graph.py
+${pkg_prefix}/bin/python -u \$SCRIPT_FILE "\$@"
+DO_SCRIPT
+  
+  chmod +x ${pkg_prefix}/bin/create-graph
 }
 
 do_strip() {
