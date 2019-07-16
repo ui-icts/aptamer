@@ -6,7 +6,8 @@ from helpers import functions
 class RNASequencePair(object):
 
     @staticmethod
-    def build(seq1, seq2):
+    def build(pair):
+        seq1, seq2 = pair
         td = RNASequencePair.compute_tree_distance(seq1,seq2)
         return RNASequencePair(seq1,seq2,td)
 

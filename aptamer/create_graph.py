@@ -37,7 +37,11 @@ def main():
         find_edges_seed(rna_seq_objs, xgmml_obj, args, stats)
     else:
         print('Finding edges (no seed)...')
-        find_edges_no_seed(rna_seq_objs, xgmml_obj, args, stats)
+        if args.spawn:
+            find_edges_no_seed_p(rna_seq_objs, xgmml_obj, args, stats)
+        else:
+            find_edges_no_seed(rna_seq_objs, xgmml_obj, args, stats)
+
 
     # output xgmml file
     if args.output:
@@ -47,10 +51,14 @@ def main():
     with open(out_xgmml_fname, 'w') as out_xgmml_f:
         out_xgmml_f.write(xgmml_obj.output(args))
 
-    print_stats(stats, args)
-    print('\n\nOutput written to %s' % (
-        out_fasta_fname if (args.calc_structures) else out_xgmml_fname
-    ))
+    if args.print_stats:
+        print_stats(stats, args)
+
+    if args.print_stats:
+        print('\n\nOutput written to %s' % (
+            out_fasta_fname if (args.calc_structures) else out_xgmml_fname
+        ))
+
     output_log(args, start_time)
     print()
     in_fh.close()
@@ -105,12 +113,26 @@ def parse_arguments():
         )
     )
     parser.add_argument(
+        '-b', '--num_batches', type=int, default=1,
+        help=(
+            'How many batches to split the input to RNAdistance into'
+        )
+    )
+    parser.add_argument(
         '--seed', action='store_true', default=False,
         help='Use seed sequence algorithm to find graph edges.'
     )
     parser.add_argument(
         '--save_combinations', action='store_true', default=False,
         help='Save the combinations used to a file for inspection.'
+    )
+    parser.add_argument(
+        '--spawn', action='store_true', default=False,
+        help='Run RNAdistance by spawning and external exe'
+    )
+    parser.add_argument(
+        '--print_stats', action='store_true', default=False,
+        help='Should stats be printed to the terminal'
     )
 
     if len(sys.argv) <= 1:
@@ -143,7 +165,9 @@ def output_log(args, start_time):
     with open(out_fname, 'w') as out_f:
         out_f.write('Command: %s\n' % ' '.join(sys.argv))
         out_f.write('Start time: %s\n' % start_time)
-    print('Log written to %s' % out_fname)
+
+    if args.print_stats:
+        print('Log written to %s' % out_fname)
 
 
 if __name__ == '__main__':
