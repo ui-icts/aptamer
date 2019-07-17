@@ -3,7 +3,9 @@ import Levenshtein
 from helpers import functions
 
 
-class RNASequencePair(object):
+class RNASequencePair:
+
+    __slots__ = 'sequence1', 'sequence2', 'tree_distance', 'energy_delta', 'edit_distance', 'is_valid_edge'
 
     @staticmethod
     def build(pair):

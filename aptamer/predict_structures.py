@@ -198,7 +198,7 @@ def output_stats_tsv(rna_seq_objs, args):
         out_fname = args.input_file + '.properties'
 
     # get header
-    categs = list(rna_seq_objs[0].__dict__.keys())
+    categs = list(rna_seq_objs[0].__slots__)
     expand_mfold = False
     if args.run_mfold and ('energy_dict' in categs):
         expand_mfold = True
@@ -212,14 +212,14 @@ def output_stats_tsv(rna_seq_objs, args):
     out_list = []
     for x in rna_seq_objs:
         curr_list = []
-        d = x.__dict__
+
         for y in categs:
             if expand_mfold and y.replace('mfold_', '') in energy_dict_keys:
                 curr_list.append(
-                    str(d['energy_dict'][y.replace('mfold_', '')])
+                    str(x.energy_dict[y.replace('mfold_', '')])
                 )
-            elif y in d and d[y]:
-                curr_list.append(str(d[y]))
+            elif getattr(x, y) is not None:
+                curr_list.append(str(getattr(x, y)))
             else:
                 curr_list.append('NA')
         out_list.append(curr_list)

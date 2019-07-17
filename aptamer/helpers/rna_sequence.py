@@ -1,4 +1,6 @@
-class RNASequence(object):
+class RNASequence:
+    __slots__ = 'name', 'cluster_size', 'sequence', 'structure', 'free_energy', 'energy_dict', 'ensemble_free_energy', 'ensemble_probability', 'ensemble_diversity', 'use_for_comparison'
+
     """Graph node."""
     def __init__(self, name, cluster_size, seq):
         self.name = name  # integer ID
@@ -19,7 +21,7 @@ class RNASequence(object):
 
     def __str__(self):
         return '\n'.join(
-            ['%s : %s' % (z, self.__dict__[z]) for z in self.__dict__]
+            ['%s : %s' % (z, getattr(self, z)) for z in self.__slots__]
         )
 
     __repr__ = __str__
