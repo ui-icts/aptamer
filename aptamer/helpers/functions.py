@@ -200,6 +200,7 @@ def find_edges_no_seed_p(rna_seq_objs, xgmml_obj, args, stats):
     print("{0} items in batches of {1}".format(num_items, batch_size))
     just_structures = map(structure, rna_seq_objs)
     pairs_of_structures = it.combinations(just_structures, 2)
+
     batches_of_pairs = grouper(
             pairs_of_structures,
             batch_size,
@@ -234,6 +235,8 @@ def find_edges_no_seed_p(rna_seq_objs, xgmml_obj, args, stats):
 
 
 def grouper(iterable, n, fillvalue=None):
+    "Collect data into fixed-length chunks or blocks"
+    # grouper('ABCDEFG', 3, 'x') --> ABC DEF Gxx"
     args = [iter(iterable)] * n
     return it.zip_longest(*args, fillvalue=fillvalue)
 
@@ -291,14 +294,14 @@ def print_stats(stats, args):
             print('N/A')
 
 
-def rna_distance(structures):
+def rna_distance(list_of_pairs_of_structures):
 
     # Because the grouper needs to fill in missing
     # values when it uses zip_longest, we need to
     # filter out those values before calling
     # the program
 
-    structures = filter(None, structures)
+    structures = filter(None, list_of_pairs_of_structures)
     structures = it.chain.from_iterable(structures)
     args = '\n'.join(structures)
 
