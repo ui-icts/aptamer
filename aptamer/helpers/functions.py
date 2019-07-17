@@ -29,7 +29,7 @@ from helpers.fasta_struct_file import FastaStructFile
 from helpers.fasta_file import FastaFile
 from helpers.rna_sequence import RNASequence
 from helpers.rna_sequence_pair import RNASequencePair
-
+from memory_profiler import profile
 
 class XGMML(object):
     """Graph. XGMML file."""
@@ -136,60 +136,44 @@ def find_edges_seed(rna_seq_objs, xgmml_obj, args, stats):
         ))
         nodes_copy = new_nodes_copy
 
-
+@profile
 def find_edges_no_seed(rna_seq_objs, xgmml_obj, args, stats):
     """"Find edges using non-seed algorithm."""
 
     rna_seq_objs = list(rna_seq_objs)
 
-    def my_callback(pairs):
-        for pair in pairs:
-            pair.output(xgmml_obj, args)
-            append_pair_stats(stats, pair)
-
-    pool = Pool()
-
-    seq_pairs = it.combinations(rna_seq_objs, 2)
-
-    num_items = ncr(len(rna_seq_objs),2)
-    batch_size = int(num_items / args.num_batches)
-    print("{0} items in batches of {1}".format(num_items, batch_size))
-    print("STARTING BATCH")
-
-    b_start = time.time()
-    result = pool.imap(
-            RNASequencePair.build,
-            seq_pairs,
-            chunksize=batch_size)
-
-    pool.close()
-    pool.join()
-
-    b_end = time.time()
-    print("FINISHED BATCH")
-    print(b_end - b_start)
-
-    my_callback(result)
-
-
-def find_edges_no_seed_p(rna_seq_objs, xgmml_obj, args, stats):
-
-    def my_callback(pairs):
-        for pair in pairs:
-            pair.output(xgmml_obj, args)
-            append_pair_stats(stats, pair)
-
-    structure = operator.attrgetter('structure')
-
-    rna_seq_objs = list(rna_seq_objs)
-
     num_items = ncr(len(rna_seq_objs), 2)
     batch_size = int(num_items / args.num_batches)
-    print("{0} items in batches of {1}".format(num_items, batch_size))
+    if args.num_batches > 100:
+        batch_size = args.num_batches
 
-    just_structures = map(structure, rna_seq_objs)
-    pairs_of_structures = it.combinations(just_structures,2)
-    batches_of_pairs = grouper(pairs_of_structures, batch_size, fillvalue=None) # list of tuples of length N where each item in the tuple is a 2-item tuple
+    print("{0} items in chunks of {1}".format(num_items, batch_size))
+
+    with Pool() as pool:
+
+        seq_pairs = it.combinations(rna_seq_objs, 2)
+
+        print("STARTING BATCH")
+
+        b_start = time.time()
+        result = pool.imap(
+                RNASequencePair.build,
+                seq_pairs,
+                chunksize=batch_size)
+
+        b_end = time.time()
+        print("FINISHED BATCH")
+        print(b_end - b_start)
+
+        for pair in result:
+            pair.output(xgmml_obj, args)
+            if args.print_stats:
+                append_pair_stats(stats, pair)
+
+
+
+@profile
+def find_edges_no_seed_p(rna_seq_objs, xgmml_obj, args, stats):
 
     #
     # batches_of_pairs look like
@@ -205,30 +189,50 @@ def find_edges_no_seed_p(rna_seq_objs, xgmml_obj, args, stats):
     # seems more clear to put that into
     # the rna_distance function itself
 
-    pool = Pool()
+    structure = operator.attrgetter('structure')
 
-    print("STARTING BATCH")
-    b_start = time.time()
+    rna_seq_objs = list(rna_seq_objs)
 
-    batch_results = pool.map(
-            rna_distance,
-            batches_of_pairs)
+    num_items = ncr(len(rna_seq_objs), 2)
+    batch_size = int(num_items / args.num_batches)
 
-    pool.close()
-    pool.join()
+    if args.num_batches > 1000:
+        batch_size = args.num_batches
 
-    b_end = time.time()
-    print("FINISHED BATCH")
-    print(b_end - b_start)
+    print("{0} items in batches of {1}".format(num_items, batch_size))
+    just_structures = map(structure, rna_seq_objs)
+    pairs_of_structures = it.combinations(just_structures, 2)
+    batches_of_pairs = grouper(
+            pairs_of_structures,
+            batch_size,
+            fillvalue=None)
 
-    parsed_results = map(parse_rna_distance_batch, batch_results)
-    parsed_results = it.chain.from_iterable(parsed_results)
+    with Pool() as pool:
 
-    seq_pairs = it.combinations(rna_seq_objs, 2)
-    pairs_with_results = it.zip_longest(seq_pairs, parsed_results)
-    pairs = (RNASequencePair(seq1, seq2, dist) for (seq1, seq2), dist in pairs_with_results)
+        print("STARTING BATCH")
+        b_start = time.time()
 
-    my_callback(pairs)
+        batch_results = pool.imap(
+                rna_distance,
+                batches_of_pairs)
+
+
+        parsed_results = map(parse_rna_distance_batch, batch_results)
+        parsed_results = it.chain.from_iterable(parsed_results)
+
+        seq_pairs = it.combinations(rna_seq_objs, 2)
+
+        pairs_with_results = it.zip_longest(seq_pairs, parsed_results)
+        pairs = (RNASequencePair(seq1, seq2, dist) for (seq1, seq2), dist in pairs_with_results)
+
+        b_end = time.time()
+        print("FINISHED BATCH")
+        print(b_end - b_start)
+
+        for pair in pairs:
+            pair.output(xgmml_obj, args)
+            if args.print_stats:
+                append_pair_stats(stats, pair)
 
 
 def grouper(iterable, n, fillvalue=None):
