@@ -9,9 +9,13 @@ Overall statistics are printed to standard output.
 """
 from __future__ import print_function
 
+import time
+import os
+import sys
+import re
+import argparse
 from builtins import str
 from helpers.functions import *
-import time
 from helpers.fasta_struct_file import FastaStructFile
 
 

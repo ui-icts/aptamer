@@ -5,7 +5,7 @@ of RNA sequences with known structures.
 If RNA structures are not already known, outputs a fasta structure file
 using structures determined via either ViennaRNA or mfold.
 
-Otherwise, outputs an xgmml graph file in which vertices are RNA 
+Otherwise, outputs an xgmml graph file in which vertices are RNA
 sequences. Edges are created between vertices that have a small enough
 tree distance or edit distance between them.
 
@@ -13,28 +13,17 @@ Overall statistics are printed to standard output.
 """
 from __future__ import print_function
 
-from builtins import zip
-from builtins import str
-from builtins import range
-from builtins import object
-import os
-import sys
-import re
 import subprocess
 import itertools as it
-import functools
 import operator
 import textwrap
-import argparse
 import numpy
 import scipy.stats
 from scipy.special import comb as ncr
 from Bio import SeqIO
 import Levenshtein
 import time
-import pdb
 import RNA
-import concurrent.futures
 from multiprocessing import Pool
 from helpers.fasta_struct_file import FastaStructFile
 from helpers.fasta_file import FastaFile
@@ -118,68 +107,6 @@ class XGMML(object):
         return self.out_str
 
 
-
-
-
-
-def rna_distance(structures):
-
-    # Because the grouper needs to fill in missing
-    # values when it uses zip_longest, we need to
-    # filter out those values before calling
-    # the program
-
-    structures = filter(None, structures)
-    structures = it.chain.from_iterable(structures)
-    args = '\n'.join(structures)
-
-    cmd = ['RNAdistance']
-    sffproc = subprocess.Popen(
-        cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
-        stdin=subprocess.PIPE, close_fds=True, shell=True,
-        encoding='ascii'
-    )
-    stdout_value, stderr_value = sffproc.communicate(args)
-    return stdout_value  # f: num1 \n f: num2 \n
-
-
-def compute_tree_distances(seq_pairs):
-    # Collect all the structures into a single string
-    # so that it can be piped to RNADistance
-    seq_to_tree = []
-    for x in seq_pairs:
-        seq_to_tree.append(x.sequence1.structure)
-        seq_to_tree.append(x.sequence2.structure)
-    string_of_sequences = '\n'.join(seq_to_tree)
-
-    tree_distance = rna_distance(string_of_sequences)
-    tree_distance = tree_distance.strip('\n').split('\n')  # take off last lr
-
-    assert len(tree_distance) == len(seq_pairs), (
-        'Error length of tree distance %s does not match length of seq_pairs '
-        '%s and should -- check installation of RNAdistance'
-        % (len(tree_distance), len(seq_pairs))
-    )
-
-    return [td.split(' ')[1] for td in tree_distance]
-
-
-def parse_rna_distance_batch(line):
-    tree_distance = line.strip('\n')
-    return [x.split(':')[1].strip() for x in line.strip('\n').split('\n')]
-    #return tree_distance.split(':')[1].strip()
-
-def process_seq_pairs(seq_pairs, args):
-    """Runs a batch of RNASequence pairs."""
-
-    tree_distance = compute_tree_distances(seq_pairs)
-
-    for i, x in enumerate(seq_pairs):
-        x.tree_distance = tree_distance[i]
-
-
-
-
 def find_edges_seed(rna_seq_objs, xgmml_obj, args, stats):
     """Find graph edges using seed algorithm."""
     nodes_copy = rna_seq_objs
@@ -210,19 +137,6 @@ def find_edges_seed(rna_seq_objs, xgmml_obj, args, stats):
             len(nodes_copy), len(new_nodes_copy)
         ))
         nodes_copy = new_nodes_copy
-
-def pairwise_combine(rna_seq_objs):
-    """
-    Combines the RNASequence objects into pairs.
-    A B C D -> [A B], [A C], [A D], [B, C] ...
-    """
-    for i in range(0, len(rna_seq_objs)):
-        for j in range(i + 1, len(rna_seq_objs)):
-            pair = RNASequencePair(
-                    rna_seq_objs[i], rna_seq_objs[j], None
-                    )
-            yield pair
-
 
 
 def find_edges_no_seed(rna_seq_objs, xgmml_obj, args, stats):
@@ -258,11 +172,6 @@ def find_edges_no_seed(rna_seq_objs, xgmml_obj, args, stats):
     print(b_end - b_start)
 
     my_callback(result)
-
-def grouper(iterable, n, fillvalue=None):
-    args = [iter(iterable)] * n
-    return it.zip_longest(*args, fillvalue=fillvalue)
-
 
 
 def find_edges_no_seed_p(rna_seq_objs, xgmml_obj, args, stats):
@@ -323,6 +232,19 @@ def find_edges_no_seed_p(rna_seq_objs, xgmml_obj, args, stats):
     my_callback(pairs)
 
 
+def grouper(iterable, n, fillvalue=None):
+    args = [iter(iterable)] * n
+    return it.zip_longest(*args, fillvalue=fillvalue)
+
+
+def process_seq_pairs(seq_pairs, args):
+    """Runs a batch of RNASequence pairs."""
+
+    tree_distance = compute_tree_distances(seq_pairs)
+
+    for i, x in enumerate(seq_pairs):
+        x.tree_distance = tree_distance[i]
+
 def make_aptamer_stats():
     return {'energy_delta': [], 'edit_distance': [], 'tree_distance': []}
 
@@ -366,3 +288,54 @@ def print_stats(stats, args):
             print('%.3g, p=%.3g' % (pearson_coeff, p_value))
         else:
             print('N/A')
+
+
+def rna_distance(structures):
+
+    # Because the grouper needs to fill in missing
+    # values when it uses zip_longest, we need to
+    # filter out those values before calling
+    # the program
+
+    structures = filter(None, structures)
+    structures = it.chain.from_iterable(structures)
+    args = '\n'.join(structures)
+
+    cmd = ['RNAdistance']
+    sffproc = subprocess.Popen(
+        cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+        stdin=subprocess.PIPE, close_fds=True, shell=True,
+        encoding='ascii'
+    )
+    stdout_value, stderr_value = sffproc.communicate(args)
+    return stdout_value  # f: num1 \n f: num2 \n
+
+
+def parse_rna_distance_batch(line):
+    tree_distance = line.strip('\n')
+    return [x.split(':')[1].strip() for x in line.strip('\n').split('\n')]
+
+
+def compute_tree_distances(seq_pairs):
+    # Collect all the structures into a single string
+    # so that it can be piped to RNADistance
+    seq_to_tree = []
+    for x in seq_pairs:
+        seq_to_tree.append(x.sequence1.structure)
+        seq_to_tree.append(x.sequence2.structure)
+    string_of_sequences = '\n'.join(seq_to_tree)
+
+    tree_distance = rna_distance(string_of_sequences)
+    tree_distance = tree_distance.strip('\n').split('\n')  # take off last lr
+
+    assert len(tree_distance) == len(seq_pairs), (
+        'Error length of tree distance %s does not match length of seq_pairs '
+        '%s and should -- check installation of RNAdistance'
+        % (len(tree_distance), len(seq_pairs))
+    )
+
+    return [td.split(' ')[1] for td in tree_distance]
+
+
+
+

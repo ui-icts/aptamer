@@ -12,7 +12,10 @@ from __future__ import print_function
 
 from helpers.functions import *
 from helpers.fasta_struct_file import FastaStructFile
+import argparse
 import time
+import os
+import sys
 
 
 def main():
