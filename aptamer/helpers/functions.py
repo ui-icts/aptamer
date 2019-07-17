@@ -21,7 +21,7 @@ import os
 import sys
 import re
 import subprocess
-import itertools
+import itertools as it
 import functools
 import operator
 import textwrap
@@ -130,7 +130,7 @@ def rna_distance(structures):
     # the program
 
     structures = filter(None, structures)
-    structures = itertools.chain.from_iterable(structures)
+    structures = it.chain.from_iterable(structures)
     args = '\n'.join(structures)
 
     cmd = ['RNAdistance']
@@ -237,7 +237,7 @@ def find_edges_no_seed(rna_seq_objs, xgmml_obj, args, stats):
 
     pool = Pool()
 
-    seq_pairs = itertools.combinations(rna_seq_objs, 2)
+    seq_pairs = it.combinations(rna_seq_objs, 2)
 
     num_items = ncr(len(rna_seq_objs),2)
     batch_size = int(num_items / args.num_batches)
@@ -261,7 +261,7 @@ def find_edges_no_seed(rna_seq_objs, xgmml_obj, args, stats):
 
 def grouper(iterable, n, fillvalue=None):
     args = [iter(iterable)] * n
-    return itertools.zip_longest(*args, fillvalue=fillvalue)
+    return it.zip_longest(*args, fillvalue=fillvalue)
 
 
 
@@ -275,9 +275,9 @@ def find_edges_no_seed_p(rna_seq_objs, xgmml_obj, args, stats):
     structure = operator.attrgetter('structure')
 
     rna_seq_objs = list(rna_seq_objs)
-    pool_input = list(rna_seq_objs)
+    pool_input = rna_seq_objs
     pool_input = map(structure, pool_input)
-    pool_input = itertools.combinations(pool_input,2)
+    pool_input = it.combinations(pool_input,2)
     num_items = ncr(len(rna_seq_objs),2)
     batch_size = int(num_items / args.num_batches)
     print("{0} items in batches of {1}".format(num_items, batch_size))
@@ -312,11 +312,14 @@ def find_edges_no_seed_p(rna_seq_objs, xgmml_obj, args, stats):
     b_end = time.time()
     print("FINISHED BATCH")
     print(b_end - b_start)
-    seq_pairs = [sp for sp in itertools.combinations(rna_seq_objs, 2)]
-    parsed_results = [parse_rna_distance_batch(br) for br in batch_results]
-    parsed_results = itertools.chain.from_iterable(parsed_results)
-    
-    pairs = [RNASequencePair(seq1, seq2, dist) for (seq1, seq2), dist in itertools.zip_longest(seq_pairs, parsed_results)]
+
+    parsed_results = map(parse_rna_distance_batch, batch_results)
+    parsed_results = it.chain.from_iterable(parsed_results)
+
+    seq_pairs = it.combinations(rna_seq_objs, 2)
+    pairs_with_results = it.zip_longest(seq_pairs, parsed_results)
+    pairs = (RNASequencePair(seq1, seq2, dist) for (seq1, seq2), dist in pairs_with_results)
+
     my_callback(pairs)
 
 
@@ -352,7 +355,7 @@ def print_stats(stats, args):
             print('%s SEM: N/A' % (stat_label))
         print()
 
-    for stat_pair in itertools.combinations(stats, 2):
+    for stat_pair in it.combinations(stats, 2):
         print('Pearson correlation(%s, %s):' % (
             stat_pair[0], stat_pair[1]
         ), end=' ')

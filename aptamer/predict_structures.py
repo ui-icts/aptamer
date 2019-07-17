@@ -137,6 +137,12 @@ def parse_arguments():
         )
     )
     parser.add_argument(
+        '-b', '--num_batches', type=int, default=1,
+        help=(
+            'How many batches to split the input to RNAdistance into'
+        )
+    )
+    parser.add_argument(
         '--pass_options', help=(
             'Quoted string containing options to pass to Vienna or '
             'mfold (depending on whether -m is selected) in lieu '
