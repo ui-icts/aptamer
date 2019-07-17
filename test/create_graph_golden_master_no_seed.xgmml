@@ -1,0 +1,204 @@
+<?xml version="1.0"?>
+<graph directed="1" id="5" label="Trunc_Test.fa.struct.fa"
+xmlns:xsi="http:///www.w3.org/2001/XMLSchema-instance"
+xmlns:ns1="http://www.w3.org/1999/xlink"
+xmlns:dc="http://purl.org/dc/elements/1.1/"
+xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+xmlns="http://www.cs.rpi.edu/XGMML">
+<node id="2" label="2" weight="1">
+<att type="integer" name="size" label="Size" value="1"/>
+<att type="string" name="structure" label="Structure" value=".............................."/>
+<att type="string" name="sequence" label="Sequence" value="AAACAUGCAUCAUCAGGUAAGUACGGUCCC"/>
+<att type="real" name="energy" label="Energy" value="1"/>
+<att type="real" name="ensembleFreeEnergy" label="ensemble Free Energy" value="1"/>
+<att type="real" name="ensembleProbability" label="ensemble Probability" value="1"/>
+<att type="real" name="ensembleDiversity" label="ensemble Diversity" value="1"/>
+</node>
+<node id="3" label="3" weight="1">
+<att type="integer" name="size" label="Size" value="1"/>
+<att type="string" name="structure" label="Structure" value="...(((....))).............."/>
+<att type="string" name="sequence" label="Sequence" value="AAAGCAUCAGUGCAAGUCGUUGGCCCC"/>
+<att type="real" name="energy" label="Energy" value="1"/>
+<att type="real" name="ensembleFreeEnergy" label="ensemble Free Energy" value="1"/>
+<att type="real" name="ensembleProbability" label="ensemble Probability" value="1"/>
+<att type="real" name="ensembleDiversity" label="ensemble Diversity" value="1"/>
+</node>
+<node id="4" label="4" weight="1">
+<att type="integer" name="size" label="Size" value="1"/>
+<att type="string" name="structure" label="Structure" value="..(((.((((.........)))).)))..."/>
+<att type="string" name="sequence" label="Sequence" value="AAAGCCACAGAUAUCUCCCCUGUUGCUCCC"/>
+<att type="real" name="energy" label="Energy" value="1"/>
+<att type="real" name="ensembleFreeEnergy" label="ensemble Free Energy" value="1"/>
+<att type="real" name="ensembleProbability" label="ensemble Probability" value="1"/>
+<att type="real" name="ensembleDiversity" label="ensemble Diversity" value="1"/>
+</node>
+<node id="5" label="5" weight="1">
+<att type="integer" name="size" label="Size" value="1"/>
+<att type="string" name="structure" label="Structure" value="...............(((.....)))...."/>
+<att type="string" name="sequence" label="Sequence" value="AAAGGUCCUCGUAUUGCACGUACUGCGCCC"/>
+<att type="real" name="energy" label="Energy" value="1"/>
+<att type="real" name="ensembleFreeEnergy" label="ensemble Free Energy" value="1"/>
+<att type="real" name="ensembleProbability" label="ensemble Probability" value="1"/>
+<att type="real" name="ensembleDiversity" label="ensemble Diversity" value="1"/>
+</node>
+<node id="6" label="6" weight="1">
+<att type="integer" name="size" label="Size" value="1"/>
+<att type="string" name="structure" label="Structure" value="..((((........))))............."/>
+<att type="string" name="sequence" label="Sequence" value="AAAGUCUGGGCUAUGACUCUUUACCCCCCCC"/>
+<att type="real" name="energy" label="Energy" value="1"/>
+<att type="real" name="ensembleFreeEnergy" label="ensemble Free Energy" value="1"/>
+<att type="real" name="ensembleProbability" label="ensemble Probability" value="1"/>
+<att type="real" name="ensembleDiversity" label="ensemble Diversity" value="1"/>
+</node>
+<node id="7" label="7" weight="1">
+<att type="integer" name="size" label="Size" value="1"/>
+<att type="string" name="structure" label="Structure" value="............((((..........))))"/>
+<att type="string" name="sequence" label="Sequence" value="AAAUGAAGGACAGGGCGUGUAAUCGUGCCC"/>
+<att type="real" name="energy" label="Energy" value="1"/>
+<att type="real" name="ensembleFreeEnergy" label="ensemble Free Energy" value="1"/>
+<att type="real" name="ensembleProbability" label="ensemble Probability" value="1"/>
+<att type="real" name="ensembleDiversity" label="ensemble Diversity" value="1"/>
+</node>
+<node id="8" label="8" weight="1">
+<att type="integer" name="size" label="Size" value="1"/>
+<att type="string" name="structure" label="Structure" value="...........(((((...)))))......"/>
+<att type="string" name="sequence" label="Sequence" value="AAAUGUCCUUGGACGAAGUUCGUCGUGCCC"/>
+<att type="real" name="energy" label="Energy" value="1"/>
+<att type="real" name="ensembleFreeEnergy" label="ensemble Free Energy" value="1"/>
+<att type="real" name="ensembleProbability" label="ensemble Probability" value="1"/>
+<att type="real" name="ensembleDiversity" label="ensemble Diversity" value="1"/>
+</node>
+<node id="9" label="9" weight="1">
+<att type="integer" name="size" label="Size" value="1"/>
+<att type="string" name="structure" label="Structure" value="..............................."/>
+<att type="string" name="sequence" label="Sequence" value="AAAUGUCCUUGGCAAGUCGUAAAUCCGUCCC"/>
+<att type="real" name="energy" label="Energy" value="1"/>
+<att type="real" name="ensembleFreeEnergy" label="ensemble Free Energy" value="1"/>
+<att type="real" name="ensembleProbability" label="ensemble Probability" value="1"/>
+<att type="real" name="ensembleDiversity" label="ensemble Diversity" value="1"/>
+</node>
+<node id="10" label="10" weight="1">
+<att type="integer" name="size" label="Size" value="1"/>
+<att type="string" name="structure" label="Structure" value="...............(((......)))..."/>
+<att type="string" name="sequence" label="Sequence" value="AACAAACCUCCAACUGCACAUUACUGCCCC"/>
+<att type="real" name="energy" label="Energy" value="1"/>
+<att type="real" name="ensembleFreeEnergy" label="ensemble Free Energy" value="1"/>
+<att type="real" name="ensembleProbability" label="ensemble Probability" value="1"/>
+<att type="real" name="ensembleDiversity" label="ensemble Diversity" value="1"/>
+</node>
+<node id="11" label="11" weight="1">
+<att type="integer" name="size" label="Size" value="1"/>
+<att type="string" name="structure" label="Structure" value=".....(((((...((......)).)).)))"/>
+<att type="string" name="sequence" label="Sequence" value="AACAAGGGCGAUCGAUGUUUUUCCCGUCCC"/>
+<att type="real" name="energy" label="Energy" value="1"/>
+<att type="real" name="ensembleFreeEnergy" label="ensemble Free Energy" value="1"/>
+<att type="real" name="ensembleProbability" label="ensemble Probability" value="1"/>
+<att type="real" name="ensembleDiversity" label="ensemble Diversity" value="1"/>
+</node>
+<node id="12" label="12" weight="1">
+<att type="integer" name="size" label="Size" value="1"/>
+<att type="string" name="structure" label="Structure" value=".........(((...........)))...."/>
+<att type="string" name="sequence" label="Sequence" value="AACACCUCCCACGAAACAACAUUGUGCCCC"/>
+<att type="real" name="energy" label="Energy" value="1"/>
+<att type="real" name="ensembleFreeEnergy" label="ensemble Free Energy" value="1"/>
+<att type="real" name="ensembleProbability" label="ensemble Probability" value="1"/>
+<att type="real" name="ensembleDiversity" label="ensemble Diversity" value="1"/>
+</node>
+<node id="13" label="13" weight="1">
+<att type="integer" name="size" label="Size" value="1"/>
+<att type="string" name="structure" label="Structure" value="..((((((...........))))))....."/>
+<att type="string" name="sequence" label="Sequence" value="AACAGGAACGCGCAAAACCUUCCUGCUCCC"/>
+<att type="real" name="energy" label="Energy" value="1"/>
+<att type="real" name="ensembleFreeEnergy" label="ensemble Free Energy" value="1"/>
+<att type="real" name="ensembleProbability" label="ensemble Probability" value="1"/>
+<att type="real" name="ensembleDiversity" label="ensemble Diversity" value="1"/>
+</node>
+<node id="14" label="14" weight="1">
+<att type="integer" name="size" label="Size" value="1"/>
+<att type="string" name="structure" label="Structure" value=".(((((..((....))...)))))......"/>
+<att type="string" name="sequence" label="Sequence" value="AACAGGUAAGUGGGCUAAUCCUGUGCGCCC"/>
+<att type="real" name="energy" label="Energy" value="1"/>
+<att type="real" name="ensembleFreeEnergy" label="ensemble Free Energy" value="1"/>
+<att type="real" name="ensembleProbability" label="ensemble Probability" value="1"/>
+<att type="real" name="ensembleDiversity" label="ensemble Diversity" value="1"/>
+</node>
+<node id="15" label="15" weight="1">
+<att type="integer" name="size" label="Size" value="1"/>
+<att type="string" name="structure" label="Structure" value=".(((.(((.........))))))......."/>
+<att type="string" name="sequence" label="Sequence" value="AACAUGACGUCCUAGUUGUCUGUGUCCCCC"/>
+<att type="real" name="energy" label="Energy" value="1"/>
+<att type="real" name="ensembleFreeEnergy" label="ensemble Free Energy" value="1"/>
+<att type="real" name="ensembleProbability" label="ensemble Probability" value="1"/>
+<att type="real" name="ensembleDiversity" label="ensemble Diversity" value="1"/>
+</node>
+<node id="16" label="16" weight="1">
+<att type="integer" name="size" label="Size" value="1"/>
+<att type="string" name="structure" label="Structure" value="...((.((......)).))..........."/>
+<att type="string" name="sequence" label="Sequence" value="AACCAAUCGUCAUAGAGUGCCAGUUGCCCC"/>
+<att type="real" name="energy" label="Energy" value="1"/>
+<att type="real" name="ensembleFreeEnergy" label="ensemble Free Energy" value="1"/>
+<att type="real" name="ensembleProbability" label="ensemble Probability" value="1"/>
+<att type="real" name="ensembleDiversity" label="ensemble Diversity" value="1"/>
+</node>
+<node id="17" label="17" weight="1">
+<att type="integer" name="size" label="Size" value="1"/>
+<att type="string" name="structure" label="Structure" value=".....(((...........)))........"/>
+<att type="string" name="sequence" label="Sequence" value="AACCAAUCGUCCAACAGUAGAUGCUCCCCC"/>
+<att type="real" name="energy" label="Energy" value="1"/>
+<att type="real" name="ensembleFreeEnergy" label="ensemble Free Energy" value="1"/>
+<att type="real" name="ensembleProbability" label="ensemble Probability" value="1"/>
+<att type="real" name="ensembleDiversity" label="ensemble Diversity" value="1"/>
+</node>
+<node id="18" label="18" weight="1">
+<att type="integer" name="size" label="Size" value="1"/>
+<att type="string" name="structure" label="Structure" value="................(((......))).."/>
+<att type="string" name="sequence" label="Sequence" value="AACCAUGGAUCGUCACGCAACACUGUGCCC"/>
+<att type="real" name="energy" label="Energy" value="1"/>
+<att type="real" name="ensembleFreeEnergy" label="ensemble Free Energy" value="1"/>
+<att type="real" name="ensembleProbability" label="ensemble Probability" value="1"/>
+<att type="real" name="ensembleDiversity" label="ensemble Diversity" value="1"/>
+</node>
+<node id="19" label="19" weight="1">
+<att type="integer" name="size" label="Size" value="1"/>
+<att type="string" name="structure" label="Structure" value=".............................."/>
+<att type="string" name="sequence" label="Sequence" value="AACCCGAUCGAUCCUAAAGUGUGUGUGCCC"/>
+<att type="real" name="energy" label="Energy" value="1"/>
+<att type="real" name="ensembleFreeEnergy" label="ensemble Free Energy" value="1"/>
+<att type="real" name="ensembleProbability" label="ensemble Probability" value="1"/>
+<att type="real" name="ensembleDiversity" label="ensemble Diversity" value="1"/>
+</node>
+<node id="20" label="20" weight="1">
+<att type="integer" name="size" label="Size" value="1"/>
+<att type="string" name="structure" label="Structure" value="...........(((........)))....."/>
+<att type="string" name="sequence" label="Sequence" value="AACCUCCGUGUGCAUUUUCGACUGCUGCCC"/>
+<att type="real" name="energy" label="Energy" value="1"/>
+<att type="real" name="ensembleFreeEnergy" label="ensemble Free Energy" value="1"/>
+<att type="real" name="ensembleProbability" label="ensemble Probability" value="1"/>
+<att type="real" name="ensembleDiversity" label="ensemble Diversity" value="1"/>
+</node>
+<edge source="2" target="9" label="2 to 9">
+<att type="string" name="interaction" label="interaction" value="tree distance"/>
+<att type="integer" name="editDistance" label="edit distance" value="13"/>
+<att type="integer" name="treeDistance" label="tree distance" value="1"/>
+</edge>
+<edge source="2" target="19" label="2 to 19">
+<att type="string" name="interaction" label="interaction" value="tree distance"/>
+<att type="integer" name="editDistance" label="edit distance" value="13"/>
+<att type="integer" name="treeDistance" label="tree distance" value="0"/>
+</edge>
+<edge source="5" target="10" label="5 to 10">
+<att type="string" name="interaction" label="interaction" value="tree distance"/>
+<att type="integer" name="editDistance" label="edit distance" value="10"/>
+<att type="integer" name="treeDistance" label="tree distance" value="2"/>
+</edge>
+<edge source="9" target="19" label="9 to 19">
+<att type="string" name="interaction" label="interaction" value="tree distance"/>
+<att type="integer" name="editDistance" label="edit distance" value="17"/>
+<att type="integer" name="treeDistance" label="tree distance" value="1"/>
+</edge>
+<edge source="10" target="18" label="10 to 18">
+<att type="string" name="interaction" label="interaction" value="tree distance"/>
+<att type="integer" name="editDistance" label="edit distance" value="14"/>
+<att type="integer" name="treeDistance" label="tree distance" value="2"/>
+</edge>
+</graph>
