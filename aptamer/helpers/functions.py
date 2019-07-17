@@ -29,7 +29,6 @@ from helpers.fasta_struct_file import FastaStructFile
 from helpers.fasta_file import FastaFile
 from helpers.rna_sequence import RNASequence
 from helpers.rna_sequence_pair import RNASequencePair
-from memory_profiler import profile
 
 class XGMML(object):
     """Graph. XGMML file."""

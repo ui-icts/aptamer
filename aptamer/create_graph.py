@@ -16,7 +16,6 @@ import argparse
 import time
 import os
 import sys
-from memory_profiler import profile
 
 def main():
     start_time = time.strftime('%Y-%m-%d %I:%M:%S%p').lower()
