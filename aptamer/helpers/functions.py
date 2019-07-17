@@ -120,6 +120,10 @@ def find_edges_seed(rna_seq_objs, xgmml_obj, args, stats):
             pair = RNASequencePair.build((nodes_copy[0], nodes_copy[x]))
             seq_pairs.append(pair)
 
+        for pair in seq_pairs:
+            pair.output(xgmml_obj, args)
+            append_pair_stats(stats, pair)
+
         for x in seq_pairs:
             if x.is_valid_edge:
                 x.sequence2.use_for_comparison = False
