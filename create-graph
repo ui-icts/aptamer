@@ -1,5 +1,6 @@
 #!/bin/bash
 set +x
+set -e
 
 INPUT_FILE_ABS=$(python -c "import os; print(os.path.realpath('$1'))")
 
