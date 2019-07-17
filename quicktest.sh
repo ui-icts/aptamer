@@ -7,11 +7,11 @@ echo "Running predict structures"
 
 echo "Comparing create graph output (no seed)"
 rm -f $graph_file
-./create-graph data/Trunc_Test/Trunc_Test.fa.struct.fa > /dev/null
+./create-graph data/Trunc_Test/Trunc_Test.fa.struct.fa --calculate_stats > /dev/null
 icdiff test/create_graph_golden_master_no_seed.xgmml $graph_file
 
 echo "Comparing create graph output (seed)"
 rm -f $graph_file
-./create-graph data/Trunc_Test/Trunc_Test.fa.struct.fa --seed > /dev/null
+./create-graph data/Trunc_Test/Trunc_Test.fa.struct.fa --seed --calculate_stats > /dev/null
 icdiff test/create_graph_golden_master_seed.xgmml $graph_file
 

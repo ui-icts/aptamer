@@ -16,6 +16,7 @@ import argparse
 import time
 import os
 import sys
+from memory_profiler import profile
 
 def main():
     start_time = time.strftime('%Y-%m-%d %I:%M:%S%p').lower()
@@ -53,10 +54,10 @@ def main():
     with open(out_xgmml_fname, 'w') as out_xgmml_f:
         out_xgmml_f.write(xgmml_obj.output(args))
 
-    if args.print_stats:
+    if args.calculate_stats:
         print_stats(stats, args)
 
-    if args.print_stats:
+    if args.calculate_stats:
         print('\n\nOutput written to %s' % (
             out_fasta_fname if (args.calc_structures) else out_xgmml_fname
         ))
@@ -133,8 +134,11 @@ def parse_arguments():
         help='Run RNAdistance by spawning and external exe'
     )
     parser.add_argument(
-        '--print_stats', action='store_true', default=False,
-        help='Should stats be printed to the terminal'
+        '--calculate_stats', action='store_true', default=False,
+        help=(
+            'If statistics should be calculated. Cannot handle sequences longer than 500'
+            '(Default: False)'
+        )
     )
 
     if len(sys.argv) <= 1:
@@ -168,7 +172,7 @@ def output_log(args, start_time):
         out_f.write('Command: %s\n' % ' '.join(sys.argv))
         out_f.write('Start time: %s\n' % start_time)
 
-    if args.print_stats:
+    if args.calculate_stats:
         print('Log written to %s' % out_fname)
 
 

@@ -136,7 +136,6 @@ def find_edges_seed(rna_seq_objs, xgmml_obj, args, stats):
         ))
         nodes_copy = new_nodes_copy
 
-@profile
 def find_edges_no_seed(rna_seq_objs, xgmml_obj, args, stats):
     """"Find edges using non-seed algorithm."""
 
@@ -167,12 +166,11 @@ def find_edges_no_seed(rna_seq_objs, xgmml_obj, args, stats):
 
         for pair in result:
             pair.output(xgmml_obj, args)
-            if args.print_stats:
+            if args.calculate_stats:
                 append_pair_stats(stats, pair)
 
 
 
-@profile
 def find_edges_no_seed_p(rna_seq_objs, xgmml_obj, args, stats):
 
     #
@@ -231,7 +229,7 @@ def find_edges_no_seed_p(rna_seq_objs, xgmml_obj, args, stats):
 
         for pair in pairs:
             pair.output(xgmml_obj, args)
-            if args.print_stats:
+            if args.calculate_stats:
                 append_pair_stats(stats, pair)
 
 
