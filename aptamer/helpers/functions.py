@@ -109,23 +109,17 @@ class XGMML(object):
 
 def find_edges_seed(rna_seq_objs, xgmml_obj, args, stats):
     """Find graph edges using seed algorithm."""
-    nodes_copy = rna_seq_objs
+    nodes_copy = list(rna_seq_objs)
     while len(nodes_copy) > 2:
         nodes_copy[0].use_for_comparison = False
         seq_pairs = []
-         # go through and find all the matches
-         # then remove matches and start again till gone
+        # go through and find all the matches
+        # then remove matches and start again till gone
         for x in range(1, len(nodes_copy)):
             # new nodes_copy[0] each time a node is deleted
-            pair = RNASequencePair( nodes_copy[0], nodes_copy[x], None)
-            pair.energy_delta = abs(
-                pair.sequence1.free_energy - pair.sequence2.free_energy
-            )
-            pair.edit_distance = Levenshtein.distance(
-                pair.sequence1.sequence, pair.sequence2.sequence
-            )
+            pair = RNASequencePair.build((nodes_copy[0], nodes_copy[x]))
             seq_pairs.append(pair)
-        process_seq_pairs(seq_pairs, args)
+
         for x in seq_pairs:
             if x.is_valid_edge:
                 x.sequence2.use_for_comparison = False
@@ -184,16 +178,17 @@ def find_edges_no_seed_p(rna_seq_objs, xgmml_obj, args, stats):
     structure = operator.attrgetter('structure')
 
     rna_seq_objs = list(rna_seq_objs)
-    pool_input = rna_seq_objs
-    pool_input = map(structure, pool_input)
-    pool_input = it.combinations(pool_input,2)
-    num_items = ncr(len(rna_seq_objs),2)
+
+    num_items = ncr(len(rna_seq_objs), 2)
     batch_size = int(num_items / args.num_batches)
     print("{0} items in batches of {1}".format(num_items, batch_size))
-    pool_input = grouper(pool_input,batch_size, fillvalue=None) # list of tuples of length N where each item in the tuple is a 2-item tuple
+
+    just_structures = map(structure, rna_seq_objs)
+    pairs_of_structures = it.combinations(just_structures,2)
+    batches_of_pairs = grouper(pairs_of_structures, batch_size, fillvalue=None) # list of tuples of length N where each item in the tuple is a 2-item tuple
 
     #
-    # pool_input look like
+    # batches_of_pairs look like
     # [(p1,p2,p3,p4),(p5,p6)]
     # and
     # p1 = (s1,s2)
@@ -213,7 +208,7 @@ def find_edges_no_seed_p(rna_seq_objs, xgmml_obj, args, stats):
 
     batch_results = pool.map(
             rna_distance,
-            pool_input)
+            batches_of_pairs)
 
     pool.close()
     pool.join()
