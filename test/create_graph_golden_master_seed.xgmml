@@ -167,6 +167,15 @@ xmlns="http://www.cs.rpi.edu/XGMML">
 <att type="real" name="ensembleProbability" label="ensemble Probability" value="1"/>
 <att type="real" name="ensembleDiversity" label="ensemble Diversity" value="1"/>
 </node>
+<node id="20" label="20" weight="1">
+<att type="integer" name="size" label="Size" value="1"/>
+<att type="string" name="structure" label="Structure" value="...........(((........)))....."/>
+<att type="string" name="sequence" label="Sequence" value="AACCUCCGUGUGCAUUUUCGACUGCUGCCC"/>
+<att type="real" name="energy" label="Energy" value="1"/>
+<att type="real" name="ensembleFreeEnergy" label="ensemble Free Energy" value="1"/>
+<att type="real" name="ensembleProbability" label="ensemble Probability" value="1"/>
+<att type="real" name="ensembleDiversity" label="ensemble Diversity" value="1"/>
+</node>
 <edge source="2" target="9" label="2 to 9">
 <att type="string" name="interaction" label="interaction" value="tree distance"/>
 <att type="integer" name="editDistance" label="edit distance" value="13"/>
