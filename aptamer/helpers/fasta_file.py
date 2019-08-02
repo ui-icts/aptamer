@@ -68,7 +68,9 @@ class FastaFile(object):
         curr_seq = RNASequence(record.id, cluster_size, sequence)
 
         fold_output = self.mfold(sequence) if self.run_mfold else self.rnafold(sequence)
-        fold_output.update(curr_seq)
+
+        if fold_output is not None:
+            fold_output.update(curr_seq)
 
         return curr_seq
 
@@ -146,14 +148,14 @@ def run_rnafold(seq, vienna_version, pass_options):
 
 
 class MFoldOutput(object):
-    def __init__(self, mfold_out):
-        self.structure, self.energy_dict = mfold_out
-        self.free_energy = curr_seq.energy_dict['dG']
+    def __init__(self, structure, energy_stats):
+        self.structure = structure
+        self.energy_stats = energy_stats
 
     def update(self, rna_sequence):
         rna_sequence.structure = self.structure
-        rna_sequence.energy_dict = self.energy_dict
-        rna_sequence.free_energy = self.energy_dict['dG']
+        rna_sequence.energy_dict = self.energy_stats
+        rna_sequence.free_energy = self.energy_stats['dG']
 
 
 def run_mfold_prg(seq, pass_options):
@@ -161,33 +163,40 @@ def run_mfold_prg(seq, pass_options):
     print('Running mfold...')
     print('##################')
     if not os.path.exists('mfold_out'):
-        os.mkdir('mfold_out')
+        os.makedirs('mfold_out', exist_ok=True)
+
     os.chdir('mfold_out')
-    temp_filename = 'mfold_temp.txt'
-    with open(temp_filename, 'w', encoding="latin-1") as f:
-        f.write('%s\n' % seq)
 
-    if pass_options is not None:
-        cmd_string = 'mfold SEQ=%s %s' % (temp_filename, pass_options)
-    else:
-        cmd_string = 'mfold SEQ=%s T=30' % temp_filename
+    try:
+        temp_filename = 'mfold_temp.txt'
+        with open(temp_filename, 'w', encoding="latin-1") as f:
+            f.write('%s\n' % seq)
 
-    ret = subprocess.call(
-        cmd_string, stderr=subprocess.STDOUT, shell=True
-    )
+        if pass_options is not None:
+            cmd_string = 'mfold SEQ=%s %s' % (temp_filename, pass_options)
+        else:
+            cmd_string = 'mfold SEQ=%s T=30' % temp_filename
 
-    if ret != 0:
-        print(
-            'Error when running mfold. Return code %d. '
-            'See mfold log file for details.' % ret
+        ret = subprocess.call(
+            cmd_string, stderr=subprocess.STDOUT, encoding='latin-1', shell=True
         )
-        sys.exit(ret)
-    print()
-    structure = convert_ct_to_bracket_dot('%s.ct' % temp_filename)
-    energy_stats = get_mfold_stats('%s.det' % temp_filename)
-    os.chdir('..')
 
-    return MFoldOutput((structure, energy_stats))
+        if ret != 0:
+            raise Exception(
+                'Error when running mfold. Return code %d. '
+                'See mfold log file for details.' % ret
+            )
+
+        print()
+        structure = convert_ct_to_bracket_dot('%s.ct' % temp_filename)
+        energy_stats = get_mfold_stats('%s.det' % temp_filename)
+        return MFoldOutput(structure, energy_stats)
+    except Exception as exc:
+        print(exc)
+        return None
+    finally:
+        os.chdir('..')
+
 
 
 def convert_ct_to_bracket_dot(ct_filename):
