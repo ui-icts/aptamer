@@ -164,7 +164,7 @@ def run_mfold_prg(seq, pass_options):
         os.mkdir('mfold_out')
     os.chdir('mfold_out')
     temp_filename = 'mfold_temp.txt'
-    with open(temp_filename, 'w') as f:
+    with open(temp_filename, 'w', encoding="latin-1") as f:
         f.write('%s\n' % seq)
 
     if pass_options is not None:
@@ -192,7 +192,7 @@ def run_mfold_prg(seq, pass_options):
 
 def convert_ct_to_bracket_dot(ct_filename):
     bracket_dot = ''
-    with open(ct_filename, 'r') as f:
+    with open(ct_filename, 'r', encoding="latin-1") as f:
         for row in f:
             row = row.split()
             # used to grab energy but not needed except to skip first line
@@ -216,7 +216,7 @@ def get_mfold_stats(det_filename):
     for key, value in valid_pattern.items():
         if value != '=':
             energy_stats[value] = None
-    with open(det_filename, 'r') as f:
+    with open(det_filename, 'r', encoding="latin-1") as f:
         for i, row in enumerate(f):
             if i == 5: #6th line
                 row = row.split()
