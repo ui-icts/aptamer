@@ -10,7 +10,6 @@ pkg_deps=(
   core/libgd
   core/zlib
   core/bash
-  core/busybox
   chrisortman/ViennaRNA
   chrisortman/mfold
 )
@@ -86,7 +85,7 @@ do_install() {
 
 # It also ensures that python output is not buffered.
 
-export LD_LIBRARY_PATH=$(pkg_path_for core/gcc-libs)/lib:$(pkg_path_for core/glibc)/lib:$(pkg_path_for core/gcc)/lib:$(pkg_path_for core/zlib)/lib:$(pkg_path_for core/libgd)/lib
+export LD_LIBRARY_PATH=$(pkg_path_for core/gcc-libs)/lib:$(pkg_path_for core/gcc)/lib:$(pkg_path_for core/zlib)/lib:$(pkg_path_for core/libgd)/lib
 export PATH=$(pkg_path_for chrisortman/ViennaRNA)/bin:$(pkg_path_for chrisortman/mfold)/bin:\$PATH
 export PYTHONPATH=$(pkg_path_for chrisortman/ViennaRNA)/lib/python3.7/site-packages
 ${pkg_prefix}/bin/python -u "\$@"
@@ -108,7 +107,7 @@ DO_SCRIPT
   cat << DO_SCRIPT > ${pkg_prefix}/bin/predict-structures
 #!$(pkg_path_for core/bash)/bin/bash
 
-export LD_LIBRARY_PATH=$(pkg_path_for core/gcc-libs)/lib:$(pkg_path_for core/glibc)/lib:$(pkg_path_for core/gcc)/lib:$(pkg_path_for core/zlib)/lib:$(pkg_path_for core/libgd)/lib
+export LD_LIBRARY_PATH=$(pkg_path_for core/gcc-libs)/lib:$(pkg_path_for core/gcc)/lib:$(pkg_path_for core/zlib)/lib:$(pkg_path_for core/libgd)/lib
 export VIRTUAL_ENV=${pkg_prefix}
 export PATH=$(pkg_path_for chrisortman/ViennaRNA)/bin:$(pkg_path_for chrisortman/mfold)/bin:${pkg_prefix}/bin:\$PATH
 export PYTHONPATH=$(pkg_path_for chrisortman/ViennaRNA)/lib/python3.7/site-packages
@@ -122,7 +121,7 @@ DO_SCRIPT
   cat << DO_SCRIPT > ${pkg_prefix}/bin/create-graph
 #!$(pkg_path_for core/bash)/bin/bash
 
-export LD_LIBRARY_PATH=$(pkg_path_for core/gcc-libs)/lib:$(pkg_path_for core/glibc)/lib:$(pkg_path_for core/gcc)/lib:$(pkg_path_for core/zlib)/lib:$(pkg_path_for core/libgd)/lib
+export LD_LIBRARY_PATH=$(pkg_path_for core/gcc-libs)/lib:$(pkg_path_for core/gcc)/lib:$(pkg_path_for core/zlib)/lib:$(pkg_path_for core/libgd)/lib
 export VIRTUAL_ENV=${pkg_prefix}
 export PATH=$(pkg_path_for chrisortman/ViennaRNA)/bin:$(pkg_path_for chrisortman/mfold)/bin:${pkg_prefix}/bin:\$PATH
 export PYTHONPATH=$(pkg_path_for chrisortman/ViennaRNA)/lib/python3.7/site-packages
