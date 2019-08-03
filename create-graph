@@ -3,6 +3,7 @@ set +x
 set -e
 
 INPUT_FILE_ABS=$(python -c "import os; print(os.path.realpath('$1'))")
+SCRIPT_PATH=${SCRIPT_PATH:-../../aptamer}
 
 if [[ -d $INPUT_FILE_ABS ]]; then
   INPUT_FILE_ABS=$INPUT_FILE_ABS/$(basename -- "$INPUT_FILE_ABS").fa.struct.fa
@@ -15,7 +16,7 @@ DATA_DIR=$(dirname -- "$INPUT_FILE_ABS")
 pushd "$DATA_DIR"
 
 # PYTHONPATH="../../aptamer:$PYTHONPATH" mprof run --python --include-children python ../../aptamer/create_graph.py $FILE_NAME $@
-python ../../aptamer/create_graph.py $FILE_NAME $@
+python $SCRIPT_PATH/create_graph.py $FILE_NAME $@
 
 popd
 
